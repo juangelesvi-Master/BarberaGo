@@ -56,10 +56,10 @@ export default function PagoReserva() {
     }
   }
 
-  if (r === undefined) return <Cargando />;
+  if (r === undefined) return <div className="sitio pantalla-centro"><Cargando /></div>;
   if (r === null) {
     return (
-      <div className="pantalla-centro">
+      <div className="sitio pantalla-centro">
         <div className="tarjeta acceso centro">
           <h2>No encontramos tu reserva</h2>
           <Link className="btn btn-primario" to={`/r/${slug}`}>Reservar</Link>
@@ -82,7 +82,7 @@ export default function PagoReserva() {
   const pagada = r.pago_estado === 'pagado';
 
   return (
-    <div className="publica">
+    <div className="sitio publica">
       <div className="tarjeta acceso centro">
         {pagada ? (
           <>

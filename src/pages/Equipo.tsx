@@ -3,6 +3,7 @@ import { supabase, mensajeError } from '../lib/supabase';
 import { useNegocio } from '../lib/sesion';
 import { PERMISOS, type Barbero, type Miembro, type Permiso } from '../lib/tipos';
 import { Aviso, Cabecera, Campo, Modal } from '../components/ui';
+import SubirFoto from '../components/SubirFoto';
 import HorarioEditor from '../components/HorarioEditor';
 
 const ROLES = { admin: 'Administrador', recepcion: 'Recepción', barbero: 'Barbero' } as const;
@@ -31,7 +32,7 @@ export default function Equipo() {
         {barberos.map((b) => (
           <li key={b.id} className={b.activo ? '' : 'inactivo'}>
             <button className="fila-enlace" onClick={() => setEditarBarbero(b)}>
-              <span className="avatar" style={{ background: b.color }}>{b.nombre.slice(0, 1).toUpperCase()}</span>
+              {b.foto_url ? <img className="avatar" src={b.foto_url} alt="" /> : <span className="avatar" style={{ background: b.color }}>{b.nombre.slice(0, 1).toUpperCase()}</span>}
               <div className="crece">
                 <strong>{b.nombre}</strong>
                 <div className="tenue pequeno">
@@ -80,6 +81,7 @@ function FormBarbero({ barbero, onCerrar, onGuardado }: { barbero: Barbero | nul
     nombre: barbero?.nombre || '', telefono: barbero?.telefono || '', color: barbero?.color || COLORES[barberos.length % COLORES.length],
     comision_servicios: barbero?.comision_servicios ?? 50, comision_productos: barbero?.comision_productos ?? 10,
     en_linea: barbero?.en_linea ?? true, activo: barbero?.activo ?? true, orden: barbero?.orden ?? barberos.length,
+    foto_url: barbero?.foto_url || null as string | null, bio: barbero?.bio || '',
   });
   const [propio, setPropio] = useState(!!barbero?.horario);
   const [horario, setHorario] = useState(barbero?.horario || negocio.horario);
@@ -87,7 +89,7 @@ function FormBarbero({ barbero, onCerrar, onGuardado }: { barbero: Barbero | nul
 
   async function guardar(e: FormEvent) {
     e.preventDefault();
-    const datos = { ...f, negocio_id: negocio.id, nombre: f.nombre.trim(), telefono: f.telefono.trim() || null, horario: propio ? horario : null };
+    const datos = { ...f, negocio_id: negocio.id, nombre: f.nombre.trim(), telefono: f.telefono.trim() || null, bio: f.bio.trim() || null, horario: propio ? horario : null };
     const { error } = barbero
       ? await supabase.from('barberos').update(datos).eq('id', barbero.id)
       : await supabase.from('barberos').insert(datos);
@@ -118,6 +120,12 @@ function FormBarbero({ barbero, onCerrar, onGuardado }: { barbero: Barbero | nul
         <label className="check"><input type="checkbox" checked={propio} onChange={(e) => setPropio(e.target.checked)} /> Tiene horario distinto al de la barbería</label>
         {propio && <HorarioEditor valor={horario} onCambio={setHorario} />}
         <label className="check"><input type="checkbox" checked={f.en_linea} onChange={(e) => setF({ ...f, en_linea: e.target.checked })} /> Aparece en reservas en línea</label>
+        {f.en_linea && (
+          <div className="fila-campos">
+            <SubirFoto etiqueta="Foto para tu página" forma="redonda" max={800} valor={f.foto_url} onCambio={(u) => setF({ ...f, foto_url: u })} />
+            <Campo etiqueta="Especialidad (opcional)"><input value={f.bio} onChange={(e) => setF({ ...f, bio: e.target.value })} maxLength={160} placeholder="Ej. Fades y diseños" /></Campo>
+          </div>
+        )}
         <label className="check"><input type="checkbox" checked={f.activo} onChange={(e) => setF({ ...f, activo: e.target.checked })} /> Activo</label>
         <Aviso>{error}</Aviso>
         <div className="acciones">

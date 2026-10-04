@@ -18,7 +18,7 @@ export default function CancelarReserva() {
   }
 
   return (
-    <div className="pantalla-centro">
+    <div className="sitio pantalla-centro">
       <div className="tarjeta acceso">
         {hecho ? (
           <>

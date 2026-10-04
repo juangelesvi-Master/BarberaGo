@@ -54,10 +54,10 @@ export default function PagoPedido() {
     }
   }
 
-  if (p === undefined) return <Cargando />;
+  if (p === undefined) return <div className="sitio pantalla-centro"><Cargando /></div>;
   if (p === null) {
     return (
-      <div className="pantalla-centro">
+      <div className="sitio pantalla-centro">
         <div className="tarjeta acceso centro">
           <h2>No encontramos tu pedido</h2>
           <Link className="btn btn-primario" to={`/r/${slug}/productos`}>Ver productos</Link>
@@ -74,7 +74,7 @@ export default function PagoPedido() {
   );
 
   return (
-    <div className="publica">
+    <div className="sitio publica">
       <div className="tarjeta acceso centro">
         {p.estado === 'pagado' || p.estado === 'entregado' ? (
           <>

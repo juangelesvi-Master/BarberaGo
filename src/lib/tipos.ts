@@ -32,6 +32,24 @@ export interface Negocio {
   anticipo_pct: number;
   pago_cuenta: string | null;
   pago_prueba: boolean;
+  sitio: Sitio;
+}
+
+/** Contenido de la página web pública de la barbería (todo opcional). */
+export interface Sitio {
+  titular?: string;
+  lema?: string;
+  descripcion?: string;
+  desde?: string;
+  portada?: string;
+  foto_nosotros?: string;
+  galeria?: string[];
+  whatsapp?: string;
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  /** Barbería ficticia para mostrar el producto. */
+  demo?: boolean;
 }
 
 /** Cobro al reservar en línea: sin pago, el cliente elige, o pago obligatorio. */
@@ -56,6 +74,7 @@ export interface Barbero {
   telefono: string | null;
   color: string;
   foto_url: string | null;
+  bio: string | null;
   horario: Horario | null;
   comision_servicios: number;
   comision_productos: number;
@@ -89,6 +108,7 @@ export interface Producto {
   activo: boolean;
   en_linea: boolean;
   descripcion: string | null;
+  foto_url: string | null;
 }
 
 /** Pedido de productos pagado en línea para recoger en la sucursal (sin cita). */

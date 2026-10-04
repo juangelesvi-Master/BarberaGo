@@ -53,3 +53,9 @@ export function whatsapp(tel: string | null | undefined, texto: string): string 
   if (t.length === 10) t = '52' + t; // número mexicano sin lada internacional
   return `https://wa.me/${t}?text=${encodeURIComponent(texto)}`;
 }
+
+/** Precio para la página pública: sin centavos cuando es cerrado ($250 en vez de $250.00). */
+export function precio(n: number | null | undefined, moneda = 'MXN'): string {
+  const v = Number(n || 0);
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda, minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }).format(v);
+}
