@@ -4,3 +4,4 @@ dist
 .env.local
 ios
 *.tsbuildinfo
+android-web/build/

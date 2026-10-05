@@ -530,3 +530,4 @@ input.codigo-acceso { font-family: var(--display), monospace; font-size: 1.4rem;
 .pestanas-chicas { display: flex; gap: .25rem; background: var(--superficie-2); border-radius: var(--radio); padding: .25rem; }
 .pestanas-chicas button { flex: 1; background: none; border: 0; color: var(--texto-2); padding: .5rem; border-radius: calc(var(--radio) - 2px); cursor: pointer; font: inherit; }
 .pestanas-chicas button.activa { background: var(--superficie); color: var(--texto); box-shadow: 0 0 0 1px var(--borde); }
+.descargar-app { display: block; text-align: center; margin-top: .25rem; }

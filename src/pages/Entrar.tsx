@@ -6,6 +6,9 @@ import { credencialesDeCodigo, normalizarCodigo } from '../lib/codigoAcceso';
 
 type Modo = 'entrar' | 'registro' | 'recuperar' | 'codigo';
 
+/** Dentro de la app de Android no se ofrece descargarla. */
+const enApp = navigator.userAgent.includes('BarberaGoAndroid');
+
 export default function Entrar() {
   const [modo, setModo] = useState<Modo>('entrar');
   const [nombre, setNombre] = useState('');
@@ -99,6 +102,7 @@ export default function Entrar() {
         </div>
         <div className="separador-acceso"><span>¿Trabajas en una barbería?</span></div>
         <button type="button" className="btn ancho" onClick={() => { setModo('codigo'); setError(''); setOk(''); }}>Portal barberos</button>
+        {!enApp && <a className="btn-texto descargar-app" href="/descargas/BarberaGo.apk" download>Descargar la app para Android</a>}
       </form>
     </div>
   );
