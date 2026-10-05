@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, mensajeError } from '../lib/supabase';
 import { useSesion } from '../lib/sesion';
+import { Marca } from '../components/Iconos';
 import { Aviso, Campo } from '../components/ui';
 import { fechaCorta } from '../lib/formato';
 
@@ -41,10 +42,7 @@ export default function Bienvenida() {
     <div className={dentro ? 'pagina angosta' : 'pantalla-centro'}>
       <div className="tarjeta acceso">
         {!dentro && (
-          <div className="marca grande">
-            <img src="/icon.svg" alt="" width={44} height={44} />
-            <span>BarberaGo</span>
-          </div>
+          <Marca grande />
         )}
         <h2>{dentro ? 'Agregar otra barbería' : 'Crea tu barbería'}</h2>
         <p className="tenue">

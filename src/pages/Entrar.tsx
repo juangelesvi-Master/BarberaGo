@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { supabase, mensajeError } from '../lib/supabase';
+import { Marca } from '../components/Iconos';
 import { Aviso, Campo } from '../components/ui';
 
 type Modo = 'entrar' | 'registro' | 'recuperar';
@@ -42,10 +43,7 @@ export default function Entrar() {
   return (
     <div className="pantalla-centro">
       <form className="tarjeta acceso" onSubmit={enviar}>
-        <div className="marca grande">
-          <img src="/icon.svg" alt="" width={44} height={44} />
-          <span>BarberaGo</span>
-        </div>
+        <Marca grande />
         <p className="tenue">Agenda, reservas en línea, cobro y comisiones para tu barbería.</p>
         {modo === 'registro' && (
           <Campo etiqueta="Tu nombre">

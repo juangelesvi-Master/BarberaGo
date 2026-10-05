@@ -2,18 +2,19 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useNegocio } from '../lib/sesion';
 import type { Permiso } from '../lib/tipos';
 import { fechaCorta } from '../lib/formato';
+import { Icono, Marca } from './Iconos';
 
 const MENU: { a: string; nombre: string; icono: string; permiso: Permiso; movil?: boolean }[] = [
-  { a: '/agenda', nombre: 'Agenda', icono: '📅', permiso: 'agenda', movil: true },
-  { a: '/cobrar', nombre: 'Cobrar', icono: '💵', permiso: 'cobrar', movil: true },
-  { a: '/pedidos', nombre: 'Pedidos', icono: '🛍️', permiso: 'cobrar' },
-  { a: '/clientes', nombre: 'Clientes', icono: '👥', permiso: 'clientes', movil: true },
-  { a: '/ventas', nombre: 'Ventas', icono: '🧾', permiso: 'caja' },
-  { a: '/reportes', nombre: 'Reportes', icono: '📊', permiso: 'reportes', movil: true },
-  { a: '/servicios', nombre: 'Servicios', icono: '✂️', permiso: 'catalogo' },
-  { a: '/productos', nombre: 'Productos', icono: '🧴', permiso: 'inventario' },
-  { a: '/equipo', nombre: 'Equipo', icono: '💈', permiso: 'equipo' },
-  { a: '/ajustes', nombre: 'Ajustes', icono: '⚙️', permiso: 'ajustes' },
+  { a: '/agenda', nombre: 'Agenda', icono: 'agenda', permiso: 'agenda', movil: true },
+  { a: '/cobrar', nombre: 'Cobrar', icono: 'cobrar', permiso: 'cobrar', movil: true },
+  { a: '/pedidos', nombre: 'Pedidos', icono: 'pedidos', permiso: 'cobrar' },
+  { a: '/clientes', nombre: 'Clientes', icono: 'clientes', permiso: 'clientes', movil: true },
+  { a: '/ventas', nombre: 'Ventas', icono: 'ventas', permiso: 'caja' },
+  { a: '/reportes', nombre: 'Reportes', icono: 'reportes', permiso: 'reportes', movil: true },
+  { a: '/servicios', nombre: 'Servicios', icono: 'servicios', permiso: 'catalogo' },
+  { a: '/productos', nombre: 'Productos', icono: 'productos', permiso: 'inventario' },
+  { a: '/equipo', nombre: 'Equipo', icono: 'equipo', permiso: 'equipo' },
+  { a: '/ajustes', nombre: 'Ajustes', icono: 'ajustes', permiso: 'ajustes' },
 ];
 
 export default function Layout() {
@@ -27,10 +28,7 @@ export default function Layout() {
   return (
     <div className="app">
       <aside className="lateral">
-        <div className="marca">
-          <img src="/icon.svg" alt="" width={32} height={32} />
-          <span>BarberaGo</span>
-        </div>
+        <Marca />
         {negocios.length > 1 ? (
           <select className="selector-negocio" value={negocio.id} onChange={(e) => elegirNegocio(e.target.value)} aria-label="Barbería">
             {negocios.map((n) => <option key={n.id} value={n.id}>{n.nombre}</option>)}
@@ -41,7 +39,7 @@ export default function Layout() {
         <nav>
           {menu.map((m) => (
             <NavLink key={m.a} to={m.a} className={({ isActive }) => (isActive ? 'activo' : '')}>
-              <span aria-hidden>{m.icono}</span> {m.nombre}
+              <Icono nombre={m.icono} /> {m.nombre}
             </NavLink>
           ))}
         </nav>
@@ -50,7 +48,7 @@ export default function Layout() {
 
       <main className="contenido">
         <div className="barra-movil">
-          <img src="/icon.svg" alt="" width={26} height={26} />
+          <span className="monograma" aria-hidden>B</span>
           {negocios.length > 1 ? (
             <select value={negocio.id} onChange={(e) => elegirNegocio(e.target.value)} aria-label="Barbería">
               {negocios.map((n) => <option key={n.id} value={n.id}>{n.nombre}</option>)}
@@ -65,12 +63,12 @@ export default function Layout() {
       <nav className="nav-movil">
         {movil.map((m) => (
           <NavLink key={m.a} to={m.a} className={({ isActive }) => (isActive ? 'activo' : '')}>
-            <span aria-hidden>{m.icono}</span>
+            <Icono nombre={m.icono} />
             <small>{m.nombre}</small>
           </NavLink>
         ))}
         <NavLink to="/mas" className={({ isActive }) => (isActive ? 'activo' : '')}>
-          <span aria-hidden>☰</span>
+          <Icono nombre="mas" />
           <small>Más</small>
         </NavLink>
       </nav>
@@ -83,14 +81,15 @@ export function Mas() {
   const { puede, salir, negocio } = useNegocio();
   return (
     <div className="pagina">
+      <p className="kicker">Menú</p>
       <h1>{negocio.nombre}</h1>
       <div className="lista-mas">
         {MENU.filter((m) => puede(m.permiso)).map((m) => (
           <NavLink key={m.a} to={m.a} className="tarjeta fila-enlace">
-            <span aria-hidden>{m.icono}</span> {m.nombre}
+            <Icono nombre={m.icono} /> {m.nombre}
           </NavLink>
         ))}
-        <button className="tarjeta fila-enlace" onClick={salir}>↩ Cerrar sesión</button>
+        <button className="tarjeta fila-enlace" onClick={salir}><Icono nombre="salir" /> Cerrar sesión</button>
       </div>
     </div>
   );
