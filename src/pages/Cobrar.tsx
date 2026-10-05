@@ -5,7 +5,7 @@ import { useNegocio } from '../lib/sesion';
 import type { Cita, CitaProducto, Producto } from '../lib/tipos';
 import { dinero, fechaLarga, hora } from '../lib/formato';
 import { Aviso, Cabecera, Campo } from '../components/ui';
-import { anchoGuardado, imprimirTicket } from '../lib/ticket';
+import { anchoGuardado, imprimirTicket, ligaReservas } from '../lib/ticket';
 import ImpresoraTickets from '../components/ImpresoraTickets';
 import ClienteBuscador, { asegurarCliente, type ClienteElegido } from '../components/ClienteBuscador';
 
@@ -118,7 +118,7 @@ export default function Cobrar() {
     setErrorImpresion('');
     try {
       imprimirTicket({
-      negocio: negocio.nombre, direccion: negocio.direccion, telefono: negocio.telefono, moneda: negocio.moneda,
+      negocio: negocio.nombre, direccion: negocio.direccion, telefono: negocio.telefono, moneda: negocio.moneda, qr: negocio.reserva_online ? ligaReservas(negocio.slug) : undefined,
       folio: t.folio, fecha: t.fecha, cliente: t.cliente, barbero: barberos.find((b) => b.id === t.barberoId)?.nombre,
       partidas: t.partidas.map((p) => ({ cantidad: p.cantidad, nombre: p.nombre, importe: p.precio * p.cantidad })),
       descuento: t.descuento, propina: t.propina, total: t.total, enLinea: t.enLinea, metodo: t.metodo, recibido: t.recibido,

@@ -1,3 +1,4 @@
+import qrcode from 'qrcode-generator';
 import { dinero } from './formato';
 
 /** Ancho del papel de la impresora térmica (se recuerda en este dispositivo). */
@@ -29,12 +30,24 @@ export function guardarImpresora(r: ImpresoraRed | null) {
   try { if (r?.ip) localStorage.setItem(CLAVE_RED, JSON.stringify(r)); else localStorage.removeItem(CLAVE_RED); } catch { /* nada */ }
 }
 
+/** Liga pública de reservas de la barbería (la misma que comparte en redes). */
+export const ligaReservas = (slug: string) => `https://barberago.restorago.com/r/${slug}`;
+
+function matrizQr(texto: string) {
+  const q = qrcode(0, 'M');
+  q.addData(texto);
+  q.make();
+  return q;
+}
+
 export type DatosTicket = {
   negocio: string; direccion?: string | null; telefono?: string | null; moneda: string;
   folio: number; fecha: Date; cliente?: string; barbero?: string;
   partidas: { cantidad: number; nombre: string; importe: number }[];
   descuento: number; propina: number; total: number; enLinea: number;
   metodo: string; recibido?: number; anulada?: boolean;
+  /** Liga de la página de reservas: se imprime como código QR al final. */
+  qr?: string;
 };
 
 const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
@@ -66,6 +79,9 @@ table { width: 100%; border-collapse: collapse; }
 td { padding: .4mm 0; vertical-align: top; }
 td.n { text-align: right; white-space: nowrap; padding-left: 2mm; }
 tr.total td { font-weight: bold; font-size: 1.1em; border-top: 1px dashed #000; padding-top: 1mm; }
+.qr { width: ${ancho === '58' ? 30 : 36}mm; margin: 3mm auto 1mm; }
+.qr svg { display: block; width: 100%; height: auto; }
+.url { font-size: .85em; word-break: break-all; }
 .anulada { text-align: center; font-weight: bold; border: 2px solid #000; margin: 2mm 0; padding: 1mm; }
 </style></head><body><div class="t">
 <h1>${esc(d.negocio)}</h1>
@@ -77,6 +93,8 @@ ${d.cliente ? `<br>Cliente: ${esc(d.cliente)}` : ''}${d.barbero ? `<br>Atendió:
 ${d.anulada ? '<div class="anulada">VENTA ANULADA</div>' : ''}
 <hr><table>${filas}</table><hr>
 <p class="c">¡Gracias por tu visita!</p>
+${d.qr ? `<div class="qr">${matrizQr(d.qr).createSvgTag({ cellSize: 4, margin: 0, scalable: true })}</div>
+<p class="c"><b>Reserva tu próxima cita</b><br><span class="url">${esc(d.qr.replace(/^https:\/\//, ''))}</span></p>` : ''}
 </div></body></html>`;
 }
 
@@ -143,10 +161,38 @@ export function escposTicket(d: DatosTicket, ancho: AnchoTicket): Uint8Array {
   else dosCol('Pago', d.metodo);
   if (d.metodo === 'efectivo' && d.recibido && d.recibido > aqui) { dosCol('Recibido', m(d.recibido)); dosCol('Cambio', m(d.recibido - aqui)); }
   guiones();
-  centro(true); linea('¡Gracias por tu visita!'); centro(false);
+  centro(true); linea('¡Gracias por tu visita!');
+  if (d.qr) {
+    linea();
+    imagenQr(b, d.qr, ancho);
+    negrita(true); linea('Reserva tu próxima cita'); negrita(false);
+    partir(d.qr.replace(/^https:\/\//, ''), cols).forEach((t) => linea(t));
+  }
+  centro(false);
   linea(); linea(); linea();
   cmd(GS, 0x56, 0x42, 0x00); // corte parcial
   return new Uint8Array(b);
+}
+
+/** Código QR como imagen de puntos (GS v 0): la imprimen todas las térmicas compatibles con ESC/POS. */
+function imagenQr(b: number[], texto: string, ancho: AnchoTicket) {
+  const q = matrizQr(texto);
+  const n = q.getModuleCount();
+  const margen = 2;
+  const escala = Math.max(2, Math.floor((ancho === '58' ? 210 : 260) / (n + margen * 2)));
+  const lado = (n + margen * 2) * escala;
+  const bytesFila = Math.ceil(lado / 8);
+  b.push(0x1d, 0x76, 0x30, 0x00, bytesFila & 0xff, bytesFila >> 8, lado & 0xff, lado >> 8);
+  for (let y = 0; y < lado; y++) {
+    const fila = new Array(bytesFila).fill(0);
+    const my = Math.floor(y / escala) - margen;
+    for (let x = 0; x < lado; x++) {
+      const mx = Math.floor(x / escala) - margen;
+      if (my >= 0 && mx >= 0 && my < n && mx < n && q.isDark(my, mx)) fila[x >> 3] |= 0x80 >> (x & 7);
+    }
+    b.push(...fila);
+  }
+  b.push(0x0a);
 }
 
 function base64(bytes: Uint8Array) {
@@ -168,7 +214,7 @@ export function ticketPrueba(): DatosTicket {
   return {
     negocio: 'BarberaGo', direccion: 'Prueba de impresora', moneda: 'MXN', folio: 0, fecha: new Date(),
     partidas: [{ cantidad: 1, nombre: 'Corte clásico', importe: 250 }, { cantidad: 2, nombre: 'Cera para peinar con acabado mate', importe: 360 }],
-    descuento: 0, propina: 30, total: 640, enLinea: 0, metodo: 'efectivo', recibido: 700,
+    descuento: 0, propina: 30, total: 640, enLinea: 0, metodo: 'efectivo', recibido: 700, qr: ligaReservas('tu-barberia'),
   };
 }
 
