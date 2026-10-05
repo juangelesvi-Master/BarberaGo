@@ -207,11 +207,18 @@ export interface Venta {
   venta_items?: { nombre: string; cantidad: number; importe: number; tipo: string }[];
 }
 
+export type NivelPlan = 'basico' | 'completo';
+
 export interface Suscripcion {
   plan: string;
   negocios_max: number;
   vence: string;
   origen: string;
+  /** basico = citas en línea y todo lo demás; completo = además tienda en línea. */
+  nivel: NivelPlan;
+  mp_suscripcion?: string | null;
+  mp_pendiente?: string | null;
+  mp_estado?: string | null;
 }
 
 /** Apartado en línea que venció sin pagarse: ya no ocupa el horario. */

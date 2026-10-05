@@ -20,6 +20,7 @@ import Tienda from './pages/Tienda';
 import PagoPedido from './pages/PagoPedido';
 import Pedidos from './pages/Pedidos';
 import Maestro from './pages/Maestro';
+import Plan from './pages/Plan';
 
 function Interno() {
   const { cargando, session, negocio, miembro, puede, esMaestro } = useSesion();
@@ -44,6 +45,7 @@ function Interno() {
         <Route path="/equipo" element={<Equipo />} />
         <Route path="/ajustes" element={<Ajustes />} />
         <Route path="/mas" element={<Mas />} />
+        <Route path="/plan" element={<Plan />} />
         <Route path="/nueva-barberia" element={<Bienvenida />} />
         <Route path="*" element={<Navigate to={inicio} replace />} />
       </Route>

@@ -113,8 +113,9 @@ export default function Ajustes() {
         <section className="tarjeta">
           <h2>Plan</h2>
           {suscripcion ? (
-            <p>Plan <strong>{suscripcion.plan}</strong>, hasta {suscripcion.negocios_max} sucursal(es). Vence el <strong>{fechaCorta(suscripcion.vence)}</strong>.</p>
+            <p>Plan <strong>{suscripcion.plan}</strong> ({suscripcion.nivel === 'completo' ? 'con tienda en línea' : 'sin tienda en línea'}), hasta {suscripcion.negocios_max} sucursal(es). Vence el <strong>{fechaCorta(suscripcion.vence)}</strong>.</p>
           ) : <p>Sin plan activo.</p>}
+          <p><Link to="/plan" className="btn btn-primario btn-chico">Ver planes y pagar</Link></p>
           <form onSubmit={canjear} className="fila">
             <input value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} placeholder="Código de activación" required aria-label="Código" />
             <button className="btn">Canjear</button>

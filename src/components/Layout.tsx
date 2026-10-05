@@ -43,6 +43,9 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        {negocio.creado_por === session?.user.id && (
+          <NavLink to="/plan" className={({ isActive }) => `enlace-plan ${isActive ? 'activo' : ''}`}><Icono nombre="plan" /> Mi plan</NavLink>
+        )}
         {esMaestro && <NavLink to="/maestro" className="enlace-maestro"><Icono nombre="maestro" /> Panel maestro</NavLink>}
         <button className="btn-texto salir" onClick={salir}>Cerrar sesión</button>
       </aside>
@@ -56,8 +59,8 @@ export default function Layout() {
             </select>
           ) : <strong>{negocio.nombre}</strong>}
         </div>
-        {vencida && <div className="aviso aviso-error banda">Tu suscripción venció el {fechaCorta(suscripcion!.vence)}. Las reservas en línea están pausadas. <NavLink to="/ajustes">Renovar</NavLink></div>}
-        {porVencer && <div className="aviso aviso-info banda">Tu plan ({suscripcion!.plan}) vence el {fechaCorta(suscripcion!.vence)}. <NavLink to="/ajustes">Ver plan</NavLink></div>}
+        {vencida && <div className="aviso aviso-error banda">Tu suscripción venció el {fechaCorta(suscripcion!.vence)}. Las reservas en línea están pausadas. <NavLink to="/plan">Renovar</NavLink></div>}
+        {porVencer && <div className="aviso aviso-info banda">Tu plan ({suscripcion!.plan}) vence el {fechaCorta(suscripcion!.vence)}. <NavLink to="/plan">Ver plan</NavLink></div>}
         <Outlet />
       </main>
 
@@ -79,7 +82,7 @@ export default function Layout() {
 
 /** Menú completo para celular. */
 export function Mas() {
-  const { puede, salir, negocio, esMaestro } = useNegocio();
+  const { puede, salir, negocio, esMaestro, session } = useNegocio();
   return (
     <div className="pagina">
       <p className="kicker">Menú</p>
@@ -90,6 +93,7 @@ export function Mas() {
             <Icono nombre={m.icono} /> {m.nombre}
           </NavLink>
         ))}
+        {negocio.creado_por === session?.user.id && <NavLink to="/plan" className="tarjeta fila-enlace"><Icono nombre="plan" /> Mi plan</NavLink>}
         {esMaestro && <NavLink to="/maestro" className="tarjeta fila-enlace"><Icono nombre="maestro" /> Panel maestro</NavLink>}
         <button className="tarjeta fila-enlace" onClick={salir}><Icono nombre="salir" /> Cerrar sesión</button>
       </div>

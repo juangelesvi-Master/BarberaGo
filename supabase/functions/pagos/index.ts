@@ -15,6 +15,13 @@
 //   POST ?accion=webhook&negocio=<id>
 //        Aviso de Mercado Pago: consulta el pago y confirma la cita (o devuelve el dinero).
 //
+// Mensualidad de BarberaGo (suscripción recurrente a la cuenta de la plataforma, con la sesión del dueño):
+//   POST {accion:"suscribir", nivel:"basico"|"completo", sucursales}   → liga para autorizar el cobro mensual
+//   POST {accion:"suscripcion_verificar"}                              → consulta a Mercado Pago y aplica el plan
+//   POST {accion:"suscripcion_cancelar"}                               → cancela los cobros futuros
+//   POST {accion:"plataforma_conectar", access_token}                  → solo el maestro: cuenta que recibe las mensualidades
+//   POST ?accion=webhook_plataforma                                    → aviso de Mercado Pago sobre suscripciones
+//
 // La llave de cada barbería solo vive en privado.pago_cuentas; nunca llega al navegador.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -241,6 +248,129 @@ async function conectar(req: Request, b: Record<string, unknown>) {
   return json({ cuenta, prueba });
 }
 
+// ───────────────────────── Mensualidad de BarberaGo ─────────────────────────
+
+type Plataforma = { token: string | null; basico: number; completo: number };
+type Preaprobacion = {
+  id: string; status: string; external_reference: string | null; next_payment_date: string | null; init_point?: string;
+};
+const PREFIJO_SUS = 'sus:';
+
+async function usuarioDe(req: Request) {
+  const jwt = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  const u = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SECRETA, Authorization: `Bearer ${jwt}` } });
+  if (!u.ok) throw new ErrorVisible('Inicia sesión de nuevo');
+  return await u.json() as { id: string; email: string };
+}
+
+async function plataforma() {
+  const p = await rpc<Plataforma>('plataforma_token', {});
+  if (!p?.token) throw new ErrorVisible('Los pagos de la mensualidad todavía no están activos. Pide un código de activación.');
+  return p as Plataforma & { token: string };
+}
+
+/** La referencia es "sus:<usuario>:<nivel>:<sucursales>"; así nunca se aplica un pago a otra cuenta. */
+function leerReferencia(ref: string | null) {
+  const [prefijo, usuario, nivel, sucursales] = String(ref || '').split(':');
+  if (`${prefijo}:` !== PREFIJO_SUS || !UUID.test(usuario || '') || !['basico', 'completo'].includes(nivel)) return null;
+  return { usuario, nivel, sucursales: Math.max(1, Math.min(100, Number(sucursales) || 1)) };
+}
+
+/** Consulta una suscripción en Mercado Pago y la aplica a la cuenta que dice su referencia. */
+async function aplicarPreaprobacion(token: string, id: string, usuarioEsperado?: string) {
+  const r = await mp(token, `/preapproval/${encodeURIComponent(id)}`);
+  if (!r.ok) return null;
+  const pre = r.datos as Preaprobacion;
+  const ref = leerReferencia(pre.external_reference);
+  if (!ref || (usuarioEsperado && ref.usuario !== usuarioEsperado)) return null;
+  const s = await rpc<Record<string, unknown> | null>('suscripcion_aplicar', {
+    p_usuario: ref.usuario, p_id: pre.id, p_estado: pre.status, p_nivel: ref.nivel,
+    p_sucursales: ref.sucursales, p_proximo: pre.next_payment_date,
+  });
+  // Al cambiar de plan, la suscripción anterior deja de cobrarse.
+  const vieja = s?.reemplazada as string | null | undefined;
+  if (vieja) await mp(token, `/preapproval/${encodeURIComponent(vieja)}`, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) });
+  return s;
+}
+
+async function suscribir(req: Request, b: Record<string, unknown>) {
+  const usuario = await usuarioDe(req);
+  const nivel = b.nivel === 'completo' ? 'completo' : 'basico';
+  const sucursales = Math.max(1, Math.min(20, Math.floor(Number(b.sucursales) || 1)));
+  const p = await plataforma();
+  const monto = Number(nivel === 'completo' ? p.completo : p.basico) * sucursales;
+  const origen = req.headers.get('origin') || '';
+  const base = ORIGENES.includes(origen) ? origen : APP_URL;
+  const r = await mp(p.token, '/preapproval', {
+    method: 'POST',
+    body: JSON.stringify({
+      reason: `BarberaGo Plan ${nivel === 'completo' ? 'Completo' : 'Básico'}${sucursales > 1 ? ` (${sucursales} sucursales)` : ''}`,
+      external_reference: `${PREFIJO_SUS}${usuario.id}:${nivel}:${sucursales}`,
+      payer_email: usuario.email,
+      auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: monto, currency_id: 'MXN' },
+      back_url: `${base}/plan?suscripcion=1`,
+      status: 'pending',
+    }),
+  });
+  if (!r.ok || !r.datos?.init_point) {
+    console.error('Mercado Pago rechazó la suscripción', r.status, r.datos);
+    throw new ErrorVisible('No se pudo iniciar la suscripción. Intenta de nuevo.');
+  }
+  await rpc('suscripcion_pendiente', { p_usuario: usuario.id, p_id: r.datos.id });
+  return json({ url: r.datos.init_point, monto });
+}
+
+async function suscripcionVerificar(req: Request) {
+  const usuario = await usuarioDe(req);
+  const datos = await rpc<{ mp_suscripcion?: string; mp_pendiente?: string }>('suscripcion_datos', { p_usuario: usuario.id });
+  const ids = [datos.mp_pendiente, datos.mp_suscripcion].filter(Boolean) as string[];
+  if (!ids.length) return json({ ok: true });
+  const p = await plataforma();
+  for (const id of ids) await aplicarPreaprobacion(p.token, id, usuario.id);
+  return json(await rpc('suscripcion_datos', { p_usuario: usuario.id }));
+}
+
+async function suscripcionCancelar(req: Request) {
+  const usuario = await usuarioDe(req);
+  const datos = await rpc<{ mp_suscripcion?: string }>('suscripcion_datos', { p_usuario: usuario.id });
+  if (!datos.mp_suscripcion) throw new ErrorVisible('No tienes una suscripción activa');
+  const p = await plataforma();
+  const r = await mp(p.token, `/preapproval/${encodeURIComponent(datos.mp_suscripcion)}`, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) });
+  if (!r.ok) throw new ErrorVisible('Mercado Pago no permitió cancelar. Intenta de nuevo.');
+  await aplicarPreaprobacion(p.token, datos.mp_suscripcion, usuario.id);
+  return json(await rpc('suscripcion_datos', { p_usuario: usuario.id }));
+}
+
+async function plataformaConectar(req: Request, b: Record<string, unknown>) {
+  const usuario = await usuarioDe(req);
+  if (!await rpc<boolean>('es_maestro_usuario', { p_usuario: usuario.id })) throw new ErrorVisible('Solo el administrador maestro puede hacer esto');
+  const token = String(b.access_token || '').trim();
+  if (!/^(APP_USR|TEST)-[\w-]{20,}$/.test(token)) throw new ErrorVisible('Pega el Access Token completo (empieza con APP_USR- o TEST-)');
+  const yo = await mp(token, '/users/me');
+  if (!yo.ok) throw new ErrorVisible('Mercado Pago no reconoce ese Access Token');
+  const prueba = token.startsWith('TEST-') || /^TEST/i.test(yo.datos?.nickname || '') || (yo.datos?.tags || []).includes('test_user');
+  const cuenta = String(yo.datos?.nickname || yo.datos?.email || yo.datos?.id);
+  await rpc('plataforma_guardar', { p_token: token, p_cuenta: cuenta, p_prueba: prueba });
+  return json({ cuenta, prueba });
+}
+
+async function webhookPlataforma(url: URL, req: Request) {
+  const cuerpo = await req.json().catch(() => ({} as Record<string, any>));
+  const tipo = String(cuerpo.type || cuerpo.topic || url.searchParams.get('type') || url.searchParams.get('topic') || '');
+  const id = String(cuerpo.data?.id || url.searchParams.get('data.id') || url.searchParams.get('id') || '');
+  if (!id) return json({ ok: true });
+  const p = await rpc<Plataforma>('plataforma_token', {});
+  if (!p?.token) return json({ ok: true });
+  // Nunca se confía en el aviso: se consulta la suscripción con la llave de BarberaGo.
+  if (tipo.includes('preapproval')) {
+    await aplicarPreaprobacion(p.token, id);
+  } else if (tipo.includes('authorized_payment')) {
+    const pago = await mp(p.token, `/authorized_payments/${encodeURIComponent(id)}`);
+    if (pago.ok && pago.datos?.preapproval_id) await aplicarPreaprobacion(p.token, String(pago.datos.preapproval_id));
+  }
+  return json({ ok: true });
+}
+
 async function webhook(url: URL, req: Request) {
   const negocio = url.searchParams.get('negocio') || '';
   const cuerpo = await req.json().catch(() => ({} as Record<string, any>));
@@ -262,6 +392,7 @@ export async function manejar(req: Request): Promise<Response> {
   const url = new URL(req.url);
   try {
     if (url.searchParams.get('accion') === 'webhook') return await webhook(url, req);
+    if (url.searchParams.get('accion') === 'webhook_plataforma') return await webhookPlataforma(url, req);
     const b = await req.json().catch(() => ({}));
     switch (b.accion) {
       case 'crear': return await crear(req, b);
@@ -269,6 +400,10 @@ export async function manejar(req: Request): Promise<Response> {
       case 'reintentar': return await reintentar(req, b);
       case 'verificar': return await verificar(b);
       case 'conectar': return await conectar(req, b);
+      case 'suscribir': return await suscribir(req, b);
+      case 'suscripcion_verificar': return await suscripcionVerificar(req);
+      case 'suscripcion_cancelar': return await suscripcionCancelar(req);
+      case 'plataforma_conectar': return await plataformaConectar(req, b);
       default: return json({ error: 'Acción no válida' }, 400);
     }
   } catch (e) {

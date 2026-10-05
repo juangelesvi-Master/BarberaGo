@@ -497,3 +497,26 @@ code { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; color: var
   .maestro .cabecera .segmentado button { flex: 1; }
 }
 .dos-columnas > .tarjeta + .tarjeta { margin-top: 0; }
+
+/* Mi plan */
+.plan-actual { display: flex; flex-wrap: wrap; gap: 1rem 2.5rem; align-items: center; margin-bottom: 1rem; }
+.plan-actual > div { display: flex; flex-direction: column; }
+.plan-actual strong { font-family: var(--display); font-weight: 500; font-size: 1.2rem; color: var(--oro-claro); }
+.plan-actual .btn { margin-left: auto; }
+.plan-sucursales { display: flex; align-items: center; gap: 1rem; margin: 1.25rem 0 1rem; }
+.plan-sucursales > span { font-family: var(--display); text-transform: uppercase; letter-spacing: .08em; font-size: .85rem; color: var(--texto-2); }
+.planes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.planes .tarjeta + .tarjeta { margin-top: 0; }
+.plan { position: relative; display: flex; flex-direction: column; gap: .35rem; padding: 1.5rem; }
+.plan h2 { font-size: 1.5rem; text-transform: uppercase; letter-spacing: .08em; margin: 0; color: var(--texto) !important; }
+.plan .tenue { margin: 0; }
+.plan-destacado { border-color: var(--oro); box-shadow: 0 0 0 1px var(--oro) inset; }
+.plan-cinta { position: absolute; top: -11px; left: 1.5rem; background: var(--oro); color: var(--primario-texto); font-family: var(--display); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; padding: .2rem .6rem; border-radius: 2px; }
+.plan-precio { font-family: var(--display); font-size: 2.4rem; color: var(--oro-claro); margin: .5rem 0 0; line-height: 1.1; }
+.plan-precio small { font-size: 1rem; color: var(--texto-2); }
+.plan-lista { list-style: none; padding: 0; margin: .75rem 0 1rem; display: grid; gap: .45rem; flex: 1; }
+.plan-lista li { padding-left: 1.5rem; position: relative; }
+.plan-lista li::before { content: ''; position: absolute; left: 0; top: .45em; width: .8rem; height: .45rem; border-left: 2px solid var(--oro); border-bottom: 2px solid var(--oro); transform: rotate(-45deg); }
+.enlace-plan { display: flex; gap: .6rem; align-items: center; padding: .6rem .75rem; border-radius: 6px; color: var(--lateral-texto); text-decoration: none; opacity: .85; }
+.enlace-plan .icono { width: 18px; height: 18px; color: var(--oro); }
+.enlace-plan:hover, .enlace-plan.activo { background: var(--superficie); opacity: 1; }

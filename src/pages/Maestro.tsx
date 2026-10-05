@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase, mensajeError } from '../lib/supabase';
+import { supabase, mensajeError, llamarPagos } from '../lib/supabase';
 import { useSesion } from '../lib/sesion';
 import { dinero, fechaCorta, isoDia } from '../lib/formato';
 import { Icono, Marca } from '../components/Iconos';
 import { Aviso, Campo, Cargando, Modal, Vacio } from '../components/ui';
 
-type Plan = { plan: string; negocios_max: number; vence: string; origen: string };
+type Plan = { plan: string; negocios_max: number; vence: string; origen: string; nivel: 'basico' | 'completo'; mp_estado?: string | null };
 type Barberia = { id: string; nombre: string; slug: string; creada: string; pago_en_linea: string; citas_30d: number; ventas_30d: number; equipo: number };
 type Cuenta = { id: string; nombre: string; email: string | null; telefono: string | null; creada: string; ultimo_acceso: string | null; maestro: boolean; suscripcion: Plan | null; barberias: Barberia[] };
-type Codigo = { codigo: string; plan: string; negocios_max: number; dias: number; usos_max: number; usos: number; expira: string | null; nota: string | null; created_at: string };
+type Codigo = { codigo: string; plan: string; nivel: 'basico' | 'completo'; negocios_max: number; dias: number; usos_max: number; usos: number; expira: string | null; nota: string | null; created_at: string };
 type Resumen = Record<'cuentas' | 'barberias' | 'activas' | 'prueba' | 'vencidas' | 'por_vencer' | 'citas_30d' | 'ventas_30d' | 'codigos_libres', number>;
-type Vista = 'resumen' | 'cuentas' | 'codigos';
+type Vista = 'resumen' | 'cuentas' | 'codigos' | 'cobro';
+type Cobro = { conectada: boolean; cuenta: string | null; prueba: boolean; basico: number; completo: number };
+const NIVEL = { basico: 'Básico (sin tienda)', completo: 'Completo (con tienda)' };
 
 const DIA = 864e5;
 
@@ -74,9 +76,9 @@ export default function Maestro() {
         <div className="cabecera">
           <h1>Panel maestro</h1>
           <div className="segmentado" role="tablist">
-            {(['resumen', 'cuentas', 'codigos'] as Vista[]).map((v) => (
+            {(['resumen', 'cuentas', 'codigos', 'cobro'] as Vista[]).map((v) => (
               <button key={v} role="tab" aria-selected={vista === v} className={vista === v ? 'activo' : ''} onClick={() => setVista(v)}>
-                {v === 'resumen' ? 'Resumen' : v === 'cuentas' ? `Cuentas (${cuentas.length})` : 'Códigos'}
+                {v === 'resumen' ? 'Resumen' : v === 'cuentas' ? `Cuentas (${cuentas.length})` : v === 'codigos' ? 'Códigos' : 'Cobro'}
               </button>
             ))}
           </div>
@@ -96,6 +98,7 @@ export default function Maestro() {
               </>
             )}
             {vista === 'codigos' && <VistaCodigos codigos={codigos} onCambio={cargar} />}
+            {vista === 'cobro' && <VistaCobro />}
           </>
         )}
       </div>
@@ -158,7 +161,8 @@ function TarjetaCuenta({ c, onEditar }: { c: Cuenta; onEditar: () => void }) {
         <span className={`insignia ${e.clase}`}>{e.texto}</span>
       </div>
       <dl className="datos">
-        <dt>Plan</dt><dd>{c.suscripcion ? `${c.suscripcion.plan} · hasta ${c.suscripcion.negocios_max} sucursal(es)` : 'Sin plan'}</dd>
+        <dt>Plan</dt><dd>{c.suscripcion ? `${c.suscripcion.plan} · ${c.suscripcion.nivel === 'completo' ? 'con tienda' : 'sin tienda'} · ${c.suscripcion.negocios_max} sucursal(es)` : 'Sin plan'}</dd>
+        <dt>Cobro</dt><dd>{c.suscripcion?.origen === 'pago' ? (c.suscripcion.mp_estado === 'authorized' ? 'Mensualidad activa' : 'Mensualidad cancelada') : c.suscripcion?.origen === 'codigo' ? 'Código' : c.suscripcion?.origen === 'manual' ? 'Manual' : c.suscripcion ? 'Prueba' : '—'}</dd>
         <dt>Vence</dt><dd>{c.suscripcion ? fechaCorta(c.suscripcion.vence) : '—'}</dd>
         <dt>Alta</dt><dd>{fechaCorta(c.creada)}</dd>
         <dt>Último acceso</dt><dd>{c.ultimo_acceso ? fechaCorta(c.ultimo_acceso) : 'Nunca'}</dd>
@@ -182,6 +186,7 @@ function EditarPlan({ cuenta, onCerrar, onGuardado }: { cuenta: Cuenta; onCerrar
   const s = cuenta.suscripcion;
   const [plan, setPlan] = useState(s && s.origen !== 'prueba' ? s.plan : 'Básico');
   const [max, setMax] = useState(s?.negocios_max || 1);
+  const [nivel, setNivel] = useState<'basico' | 'completo'>(s?.nivel || 'completo');
   const [vence, setVence] = useState(isoDia(new Date(s && new Date(s.vence) > new Date() ? s.vence : Date.now() + 30 * DIA)));
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -194,7 +199,7 @@ function EditarPlan({ cuenta, onCerrar, onGuardado }: { cuenta: Cuenta; onCerrar
     e?.preventDefault();
     setError(''); setEnviando(true);
     const fecha = suspender ? new Date().toISOString() : new Date(`${vence}T23:59:59`).toISOString();
-    const { error } = await supabase.rpc('maestro_plan', { p_usuario: cuenta.id, p_plan: plan, p_negocios_max: max, p_vence: fecha });
+    const { error } = await supabase.rpc('maestro_plan_nivel', { p_usuario: cuenta.id, p_plan: plan, p_nivel: nivel, p_negocios_max: max, p_vence: fecha });
     setEnviando(false);
     if (error) return setError(mensajeError(error));
     onGuardado();
@@ -207,7 +212,8 @@ function EditarPlan({ cuenta, onCerrar, onGuardado }: { cuenta: Cuenta; onCerrar
           <Campo etiqueta="Plan"><input value={plan} onChange={(e) => setPlan(e.target.value)} required maxLength={30} list="planes" /></Campo>
           <Campo etiqueta="Sucursales"><input type="number" min={1} max={100} value={max} onChange={(e) => setMax(Number(e.target.value))} required /></Campo>
         </div>
-        <datalist id="planes"><option value="Básico" /><option value="Pro" /><option value="Cadena" /></datalist>
+        <datalist id="planes"><option value="Básico" /><option value="Completo" /></datalist>
+        <Campo etiqueta="Incluye"><select value={nivel} onChange={(e) => setNivel(e.target.value as 'basico' | 'completo')}><option value="basico">{NIVEL.basico}</option><option value="completo">{NIVEL.completo}</option></select></Campo>
         <Campo etiqueta="Vence"><input type="date" value={vence} onChange={(e) => setVence(e.target.value)} required /></Campo>
         <div className="chips">
           <button type="button" className="chip" onClick={() => sumar(30)}>+30 días</button>
@@ -225,7 +231,8 @@ function EditarPlan({ cuenta, onCerrar, onGuardado }: { cuenta: Cuenta; onCerrar
 }
 
 function VistaCodigos({ codigos, onCambio }: { codigos: Codigo[]; onCambio: () => void }) {
-  const [plan, setPlan] = useState('Pro');
+  const [plan, setPlan] = useState('Completo');
+  const [nivel, setNivel] = useState<'basico' | 'completo'>('completo');
   const [max, setMax] = useState(1);
   const [dias, setDias] = useState(30);
   const [cantidad, setCantidad] = useState(1);
@@ -239,7 +246,7 @@ function VistaCodigos({ codigos, onCambio }: { codigos: Codigo[]; onCambio: () =
   async function generar(e: FormEvent) {
     e.preventDefault();
     setError(''); setOk(''); setEnviando(true);
-    const { data, error } = await supabase.rpc('maestro_crear_codigos', { p_plan: plan, p_negocios_max: max, p_dias: dias, p_cantidad: cantidad, p_usos_max: usos, p_nota: nota });
+    const { data, error } = await supabase.rpc('maestro_generar_codigos', { p_plan: plan, p_nivel: nivel, p_negocios_max: max, p_dias: dias, p_cantidad: cantidad, p_usos_max: usos, p_nota: nota });
     setEnviando(false);
     if (error) return setError(mensajeError(error));
     setNuevos(data as string[]);
@@ -269,7 +276,8 @@ function VistaCodigos({ codigos, onCambio }: { codigos: Codigo[]; onCambio: () =
           <Campo etiqueta="Cuántos códigos"><input type="number" min={1} max={100} value={cantidad} onChange={(e) => setCantidad(Number(e.target.value))} required /></Campo>
           <Campo etiqueta="Usos por código"><input type="number" min={1} max={10000} value={usos} onChange={(e) => setUsos(Number(e.target.value))} required /></Campo>
         </div>
-        <datalist id="planes-codigo"><option value="Básico" /><option value="Pro" /><option value="Cadena" /></datalist>
+        <datalist id="planes-codigo"><option value="Básico" /><option value="Completo" /></datalist>
+        <Campo etiqueta="Incluye"><select value={nivel} onChange={(e) => { const n = e.target.value as 'basico' | 'completo'; setNivel(n); setPlan(n === 'completo' ? 'Completo' : 'Básico'); }}><option value="basico">{NIVEL.basico}</option><option value="completo">{NIVEL.completo}</option></select></Campo>
         <Campo etiqueta="Nota (para ti)"><input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={120} placeholder="Ej. Barbería El Güero, pagó transferencia" /></Campo>
         <Aviso>{error}</Aviso>
         <div className="acciones"><button className="btn btn-primario" disabled={enviando}>Generar</button></div>
@@ -286,7 +294,7 @@ function VistaCodigos({ codigos, onCambio }: { codigos: Codigo[]; onCambio: () =
       {codigos.length === 0 ? <Vacio>Todavía no has generado códigos.</Vacio> : (
         <div className="tabla-scroll">
           <table className="tabla">
-            <thead><tr><th>Código</th><th>Plan</th><th className="num">Sucursales</th><th className="num">Días</th><th className="num">Usos</th><th>Estado</th><th>Nota</th><th>Creado</th><th /></tr></thead>
+            <thead><tr><th>Código</th><th>Plan</th><th>Tienda</th><th className="num">Sucursales</th><th className="num">Días</th><th className="num">Usos</th><th>Estado</th><th>Nota</th><th>Creado</th><th /></tr></thead>
             <tbody>
               {codigos.map((c) => {
                 const est = estadoCodigo(c);
@@ -294,6 +302,7 @@ function VistaCodigos({ codigos, onCambio }: { codigos: Codigo[]; onCambio: () =
                   <tr key={c.codigo} className={est === 'Disponible' ? '' : 'inactivo'}>
                     <td><code>{c.codigo}</code></td>
                     <td>{c.plan}</td>
+                    <td>{c.nivel === 'completo' ? 'Sí' : 'No'}</td>
                     <td className="num">{c.negocios_max}</td>
                     <td className="num">{c.dias}</td>
                     <td className="num">{c.usos}/{c.usos_max}</td>
@@ -308,6 +317,70 @@ function VistaCodigos({ codigos, onCambio }: { codigos: Codigo[]; onCambio: () =
           </table>
         </div>
       )}
+    </>
+  );
+}
+
+/** Cuenta de Mercado Pago de BarberaGo (recibe las mensualidades) y precios de los planes. */
+function VistaCobro() {
+  const [c, setC] = useState<Cobro | null>(null);
+  const [token, setToken] = useState('');
+  const [basico, setBasico] = useState('');
+  const [completo, setCompleto] = useState('');
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const aviso = `${import.meta.env.VITE_SUPABASE_URL || 'https://stcazhnnsisklzpdwltu.supabase.co'}/functions/v1/pagos?accion=webhook_plataforma`;
+
+  const cargar = useCallback(async () => {
+    const { data, error } = await supabase.rpc('maestro_plataforma');
+    if (error) return setError(mensajeError(error));
+    const d = data as Cobro;
+    setC(d); setBasico(String(d.basico)); setCompleto(String(d.completo));
+  }, []);
+  useEffect(() => { cargar(); }, [cargar]);
+
+  async function conectar(e: FormEvent) {
+    e.preventDefault();
+    setError(''); setOk(''); setEnviando(true);
+    try {
+      const r = await llamarPagos<{ cuenta: string; prueba: boolean }>({ accion: 'plataforma_conectar', access_token: token });
+      setToken(''); setOk(`Cuenta conectada: ${r.cuenta}${r.prueba ? ' (de prueba)' : ''}.`); cargar();
+    } catch (e) { setError(mensajeError(e)); }
+    setEnviando(false);
+  }
+
+  async function guardarPrecios(e: FormEvent) {
+    e.preventDefault();
+    setError(''); setOk('');
+    const { error } = await supabase.rpc('maestro_precios', { p_basico: Number(basico), p_completo: Number(completo) });
+    if (error) return setError(mensajeError(error));
+    setOk('Precios guardados. Aplican a las suscripciones nuevas.'); cargar();
+  }
+
+  if (!c) return <><Aviso>{error}</Aviso><Cargando /></>;
+  return (
+    <>
+      <Aviso>{error}</Aviso>
+      <Aviso tipo="ok">{ok}</Aviso>
+      <div className="dos-columnas">
+        <form className="tarjeta formulario" onSubmit={conectar}>
+          <h2>Mercado Pago de BarberaGo</h2>
+          <p className="tenue pequeno">Aquí llegan las mensualidades de las barberías. Pega el Access Token de tu cuenta (Mercado Pago Developers → tu aplicación → Credenciales de producción).</p>
+          <p>{c.conectada ? <>Conectada: <strong>{c.cuenta}</strong>{c.prueba && <span className="insignia insignia-prueba">Prueba</span>}</> : <span className="texto-peligro">Sin conectar: las barberías no pueden pagar con tarjeta todavía.</span>}</p>
+          <Campo etiqueta={c.conectada ? 'Cambiar Access Token' : 'Access Token'}><input value={token} onChange={(e) => setToken(e.target.value)} placeholder="APP_USR-…" required autoComplete="off" /></Campo>
+          <div className="acciones"><button className="btn btn-primario" disabled={enviando}>{enviando ? 'Validando…' : 'Conectar'}</button></div>
+          <p className="tenue pequeno">Para que los cobros de cada mes se registren solos, en tu aplicación de Mercado Pago entra a Webhooks, pega esta URL y marca "Planes y suscripciones":</p>
+          <div className="enlace-reserva"><code>{aviso}</code></div>
+        </form>
+        <form className="tarjeta formulario" onSubmit={guardarPrecios}>
+          <h2>Precios por sucursal al mes</h2>
+          <Campo etiqueta="Básico: citas en línea y todo lo demás"><input type="number" min={1} step="0.01" value={basico} onChange={(e) => setBasico(e.target.value)} required /></Campo>
+          <Campo etiqueta="Completo: además tienda en línea"><input type="number" min={1} step="0.01" value={completo} onChange={(e) => setCompleto(e.target.value)} required /></Campo>
+          <p className="tenue pequeno">Hoy: {dinero(c.basico)} y {dinero(c.completo)}. Los cambios aplican a quien se suscriba después; las mensualidades ya autorizadas conservan su precio.</p>
+          <div className="acciones"><button className="btn btn-primario">Guardar precios</button></div>
+        </form>
+      </div>
     </>
   );
 }

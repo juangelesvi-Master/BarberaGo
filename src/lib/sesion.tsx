@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { llamarPagos, supabase } from './supabase';
 import type { Barbero, Miembro, Negocio, Permiso, Servicio, Suscripcion } from './tipos';
 
 const CLAVE_NEGOCIO = 'barberago.negocio';
@@ -24,6 +24,21 @@ interface Estado {
 }
 
 const Ctx = createContext<Estado | null>(null);
+
+/**
+ * Respaldo por si el aviso de Mercado Pago se atrasa: si hay una mensualidad por autorizar o el plan
+ * está por vencer, se pregunta una vez por sesión y se recarga si cambió.
+ */
+const revisadas = new Set<string>();
+function revisarMensualidad(uid: string, s: Suscripcion | null, alCambiar?: () => void) {
+  if (!s || revisadas.has(uid)) return;
+  const porVencer = new Date(s.vence).getTime() - Date.now() < 5 * 864e5;
+  if (!s.mp_pendiente && !(s.mp_suscripcion && porVencer)) return;
+  revisadas.add(uid);
+  llamarPagos<Suscripcion>({ accion: 'suscripcion_verificar' })
+    .then((n) => { if (n?.vence && (n.vence !== s.vence || n.nivel !== s.nivel)) alCambiar?.(); })
+    .catch(() => { /* se reintenta en la siguiente sesión */ });
+}
 
 export function useSesion(): Estado {
   const v = useContext(Ctx);
@@ -62,6 +77,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
 
   const uid = session?.user.id;
   const uidCargado = useRef<string | undefined>(undefined);
+  const recargarRef = useRef<() => void>(undefined);
 
   const recargar = useCallback(async () => {
     if (!uid) { setNegocios([]); setMiembros([]); setSuscripcion(null); setEsMaestro(false); setCargando(false); return; }
@@ -71,17 +87,19 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     const [m, n, s, ma] = await Promise.all([
       supabase.from('miembros').select('*').eq('usuario_id', uid).eq('activo', true),
       supabase.from('negocios').select('*').order('created_at'),
-      supabase.from('suscripciones').select('plan, negocios_max, vence, origen').eq('usuario_id', uid).maybeSingle(),
+      supabase.from('suscripciones').select('plan, negocios_max, vence, origen, nivel, mp_suscripcion, mp_pendiente, mp_estado').eq('usuario_id', uid).maybeSingle(),
       supabase.rpc('maestro_es'),
     ]);
     setMiembros((m.data as Miembro[]) || []);
     setNegocios((n.data as Negocio[]) || []);
     setSuscripcion((s.data as Suscripcion) || null);
+    revisarMensualidad(uid, s.data as Suscripcion | null, () => recargarRef.current?.());
     setEsMaestro(ma.data === true);
     uidCargado.current = uid;
     setCargando(false);
   }, [uid]);
 
+  recargarRef.current = recargar;
   useEffect(() => { if (listo) recargar(); }, [listo, recargar]);
 
   const negocio = useMemo(

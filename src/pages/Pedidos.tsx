@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase, mensajeError } from '../lib/supabase';
 import { useNegocio } from '../lib/sesion';
+import AvisoTienda from '../components/AvisoTienda';
 import type { Pedido } from '../lib/tipos';
 import { dinero, fechaCorta, hora, whatsapp } from '../lib/formato';
 import { Aviso, Cabecera, Vacio } from '../components/ui';
@@ -53,6 +54,7 @@ export default function Pedidos() {
       <Cabecera titulo="Pedidos para recoger">
         <button className="btn" onClick={cargar}>Actualizar</button>
       </Cabecera>
+      <AvisoTienda />
       <p className="tenue pequeno">
         Productos que tus clientes compraron y pagaron en línea desde{' '}
         <a href={`/r/${negocio.slug}/productos`} target="_blank" rel="noreferrer">tu página de productos</a>.

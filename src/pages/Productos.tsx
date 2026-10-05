@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { supabase, mensajeError } from '../lib/supabase';
 import { useNegocio } from '../lib/sesion';
+import AvisoTienda from '../components/AvisoTienda';
 import type { Producto } from '../lib/tipos';
 import { dinero } from '../lib/formato';
 import { Aviso, Cabecera, Campo, Modal, Vacio } from '../components/ui';
@@ -91,6 +92,7 @@ function FormProducto({ producto, onCerrar, onGuardado }: { producto: Producto |
         <label className="check"><input type="checkbox" checked={f.en_linea} onChange={(e) => setF({ ...f, en_linea: e.target.checked })} /> Vender en la página de reservas</label>
         {f.en_linea && (
           <>
+            <AvisoTienda />
             <Campo etiqueta="Descripción para tus clientes (opcional)">
               <input value={f.descripcion} onChange={(e) => setF({ ...f, descripcion: e.target.value })} maxLength={200} placeholder="Ej. Fijación fuerte, 100 g" />
             </Campo>
