@@ -5,11 +5,12 @@ import { useNegocio } from '../lib/sesion';
 import type { Cita, CitaProducto, Producto } from '../lib/tipos';
 import { dinero, fechaLarga, hora } from '../lib/formato';
 import { Aviso, Cabecera, Campo } from '../components/ui';
+import { anchoGuardado, guardarAncho, imprimirTicket, type AnchoTicket } from '../lib/ticket';
 import ClienteBuscador, { asegurarCliente, type ClienteElegido } from '../components/ClienteBuscador';
 
 type Partida = { clave: string; tipo: 'servicio' | 'producto'; id: string; nombre: string; precio: number; cantidad: number; barberoId: string };
 type Metodo = 'efectivo' | 'tarjeta' | 'transferencia';
-type Ticket = { folio: number; total: number; partidas: Partida[]; propina: number; descuento: number; metodo: Metodo; cliente: string; recibido: number; enLinea: number };
+type Ticket = { folio: number; fecha: Date; total: number; partidas: Partida[]; propina: number; descuento: number; metodo: Metodo; cliente: string; barberoId: string; recibido: number; enLinea: number };
 
 export default function Cobrar() {
   const { negocio, barberos, servicios, miembro } = useNegocio();
@@ -30,6 +31,7 @@ export default function Cobrar() {
   const [enviando, setEnviando] = useState(false);
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [pendientes, setPendientes] = useState<Cita[]>([]);
+  const [ancho, setAncho] = useState<AnchoTicket>(anchoGuardado);
 
   useEffect(() => {
     supabase.from('productos').select('*').eq('negocio_id', negocio.id).eq('activo', true).order('nombre')
@@ -101,7 +103,7 @@ export default function Cobrar() {
       });
       if (error) throw error;
       const r = data as { folio: number; total: number; pagado_en_linea: number };
-      setTicket({ folio: r.folio, total: r.total, partidas, propina, descuento, metodo, cliente: cliente.nombre, recibido, enLinea: Number(r.pagado_en_linea || 0) });
+      setTicket({ folio: r.folio, fecha: new Date(), barberoId, total: r.total, partidas, propina, descuento, metodo, cliente: cliente.nombre, recibido, enLinea: Number(r.pagado_en_linea || 0) });
       limpiar();
     } catch (err) {
       setError(mensajeError(err));
@@ -110,13 +112,22 @@ export default function Cobrar() {
     }
   }
 
+  function imprimir(t: Ticket) {
+    imprimirTicket({
+      negocio: negocio.nombre, direccion: negocio.direccion, telefono: negocio.telefono, moneda: negocio.moneda,
+      folio: t.folio, fecha: t.fecha, cliente: t.cliente, barbero: barberos.find((b) => b.id === t.barberoId)?.nombre,
+      partidas: t.partidas.map((p) => ({ cantidad: p.cantidad, nombre: p.nombre, importe: p.precio * p.cantidad })),
+      descuento: t.descuento, propina: t.propina, total: t.total, enLinea: t.enLinea, metodo: t.metodo, recibido: t.recibido,
+    }, ancho);
+  }
+
   if (ticket) {
     return (
       <div className="pagina angosta">
         <div className="tarjeta ticket" id="ticket">
           <h2>{negocio.nombre}</h2>
           {negocio.direccion && <p className="tenue pequeno">{negocio.direccion}</p>}
-          <p>Folio <strong>#{ticket.folio}</strong> · {fechaLarga(new Date())} {hora(new Date())}</p>
+          <p>Folio <strong>#{ticket.folio}</strong> · {fechaLarga(ticket.fecha)} {hora(ticket.fecha)}</p>
           {ticket.cliente && <p>Cliente: {ticket.cliente}</p>}
           <table className="tabla">
             <tbody>
@@ -140,7 +151,13 @@ export default function Cobrar() {
           <p className="tenue pequeno centro">¡Gracias por tu visita!</p>
         </div>
         <div className="acciones no-imprimir">
-          <button className="btn" onClick={() => window.print()}>Imprimir</button>
+          <div className="segmentado" role="radiogroup" aria-label="Papel de la impresora">
+            {(['58', '80'] as AnchoTicket[]).map((a) => (
+              <button key={a} role="radio" aria-checked={ancho === a} className={ancho === a ? 'activo' : ''}
+                onClick={() => { setAncho(a); guardarAncho(a); }}>{a} mm</button>
+            ))}
+          </div>
+          <button className="btn" onClick={() => imprimir(ticket)}>Imprimir ticket</button>
           <button className="btn btn-primario" onClick={() => setTicket(null)}>Nuevo cobro</button>
         </div>
       </div>

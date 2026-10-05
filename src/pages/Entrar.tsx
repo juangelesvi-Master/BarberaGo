@@ -103,6 +103,7 @@ export default function Entrar() {
         <div className="separador-acceso"><span>¿Trabajas en una barbería?</span></div>
         <button type="button" className="btn ancho" onClick={() => { setModo('codigo'); setError(''); setOk(''); }}>Portal barberos</button>
         {!enApp && <a className="btn-texto descargar-app" href="/descargas/BarberaGo.apk" download>Descargar la app para Android</a>}
+        {modo === 'registro' && <a className="btn-texto descargar-app" href="/promo">¿Qué incluye BarberaGo?</a>}
       </form>
     </div>
   );

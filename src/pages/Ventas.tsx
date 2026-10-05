@@ -4,6 +4,7 @@ import { useNegocio } from '../lib/sesion';
 import type { Venta } from '../lib/tipos';
 import { deIsoDia, dinero, hora, isoDia, sumarDias } from '../lib/formato';
 import { Aviso, Cabecera, Vacio } from '../components/ui';
+import { anchoGuardado, imprimirTicket } from '../lib/ticket';
 
 export default function Ventas() {
   const { negocio, barberos, puede } = useNegocio();
@@ -28,6 +29,16 @@ export default function Ventas() {
     const { error } = await supabase.rpc('anular_venta', { p_negocio: negocio.id, p_venta: v.id, p_motivo: motivo });
     if (error) return setError(mensajeError(error));
     cargar();
+  }
+
+  function reimprimir(v: Venta) {
+    imprimirTicket({
+      negocio: negocio.nombre, direccion: negocio.direccion, telefono: negocio.telefono, moneda: negocio.moneda,
+      folio: v.folio, fecha: new Date(v.fecha), cliente: v.clientes?.nombre, barbero: barberos.find((b) => b.id === v.barbero_id)?.nombre,
+      partidas: (v.venta_items || []).map((i) => ({ cantidad: i.cantidad, nombre: i.nombre, importe: Number(i.importe) })),
+      descuento: Number(v.descuento), propina: Number(v.propina), total: Number(v.total), enLinea: Number(v.pagado_en_linea || 0),
+      metodo: v.metodo_pago, anulada: v.estado === 'anulada',
+    }, anchoGuardado());
   }
 
   const pagadas = ventas.filter((v) => v.estado === 'pagada');
@@ -64,7 +75,10 @@ export default function Ventas() {
                   <td>{barberos.find((b) => b.id === v.barbero_id)?.nombre || '—'}</td>
                   <td>{v.metodo_pago}{Number(v.pagado_en_linea) > 0 && <div className="pequeno tenue">+ {dinero(v.pagado_en_linea, negocio.moneda)} en línea</div>}</td>
                   <td className="num">{dinero(v.total, negocio.moneda)}{v.estado === 'anulada' && <div className="pequeno">anulada</div>}</td>
-                  <td>{v.estado === 'pagada' && puede('caja') && <button className="btn-texto" onClick={() => anular(v)}>Anular</button>}</td>
+                  <td className="acciones-fila">
+                    <button className="btn-texto" onClick={() => reimprimir(v)}>Ticket</button>
+                    {v.estado === 'pagada' && puede('caja') && <button className="btn-texto" onClick={() => anular(v)}>Anular</button>}
+                  </td>
                 </tr>
               ))}
             </tbody>

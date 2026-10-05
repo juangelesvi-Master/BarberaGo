@@ -42,3 +42,8 @@ export function llamarPagos<T>(cuerpo: Record<string, unknown>): Promise<T> {
 export function llamarPersonal<T>(cuerpo: Record<string, unknown>): Promise<T> {
   return llamarFuncion<T>('personal', cuerpo, 'No se pudo completar. Intenta de nuevo.');
 }
+
+/** Edge Function del panel maestro (contraseñas y eliminar cuentas). */
+export function llamarMaestro<T>(cuerpo: Record<string, unknown>): Promise<T> {
+  return llamarFuncion<T>('maestro', cuerpo, 'No se pudo completar. Intenta de nuevo.');
+}

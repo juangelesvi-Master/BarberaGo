@@ -23,6 +23,7 @@ import PagoPedido from './pages/PagoPedido';
 import Pedidos from './pages/Pedidos';
 import Maestro from './pages/Maestro';
 import Plan from './pages/Plan';
+import Promo from './pages/Promo';
 
 function Interno() {
   const { cargando, session, negocio, miembro, puede, esMaestro } = useSesion();
@@ -63,6 +64,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Páginas públicas para clientes: no requieren cuenta. */}
+        <Route path="/promo" element={<Promo />} />
         <Route path="/r/:slug" element={<Reservar />} />
         <Route path="/r/:slug/cancelar/:cita" element={<CancelarReserva />} />
         <Route path="/r/:slug/pago/:cita" element={<PagoReserva />} />

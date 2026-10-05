@@ -29,11 +29,27 @@ export default function Plan() {
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [codigo, setCodigo] = useState('');
+  const [anual, setAnual] = useState(false);
   const esDueno = negocio.creado_por === session?.user.id;
 
   useEffect(() => { supabase.rpc('planes_precios').then(({ data }) => setPrecios(data as Precios)); }, []);
 
-  // Al volver de Mercado Pago se confirma la suscripción.
+  // Al volver de Mercado Pago se confirma la suscripción o el pago único.
+  useEffect(() => {
+    if (!params.get('pago')) return;
+    const pago = params.get('payment_id') || params.get('collection_id') || '';
+    setEnviando('verificar');
+    llamarPagos<{ estado: string | null }>({ accion: 'pago_unico_verificar', pago })
+      .then(async (r) => {
+        await recargar();
+        if (r.estado === 'approved') setOk('Pago recibido. Tu plan ya quedó activo.');
+        else if (r.estado === 'pending' || r.estado === 'in_process') setOk('Tu ficha de pago quedó lista. En cuanto pagues en OXXO (o se acredite), tu plan se activa solo.');
+        else if (r.estado) setError('El pago no se completó. Puedes intentarlo de nuevo.');
+      })
+      .catch((e) => setError(mensajeError(e)))
+      .finally(() => { setEnviando(''); setParams({}, { replace: true }); });
+  }, [params, recargar, setParams]);
+
   useEffect(() => {
     if (!params.get('suscripcion')) return;
     setEnviando('verificar');
@@ -53,15 +69,23 @@ export default function Plan() {
   async function suscribir(nivel: NivelPlan) {
     setError(''); setOk(''); setEnviando(nivel);
     try {
-      const r = await llamarPagos<{ url: string }>({ accion: 'suscribir', nivel, sucursales });
+      const r = await llamarPagos<{ url: string }>({ accion: 'suscribir', nivel, sucursales, anual });
+      window.location.href = r.url;
+    } catch (e) { setError(mensajeError(e)); setEnviando(''); }
+  }
+
+  async function pagarUnaVez(nivel: NivelPlan) {
+    setError(''); setOk(''); setEnviando(`unico-${nivel}`);
+    try {
+      const r = await llamarPagos<{ url: string }>({ accion: 'pago_unico', nivel, sucursales, meses: anual ? 12 : 1 });
       window.location.href = r.url;
     } catch (e) { setError(mensajeError(e)); setEnviando(''); }
   }
 
   async function cancelar() {
-    if (!confirm(`¿Cancelar la mensualidad? Ya no se cobrará y tu plan sigue activo hasta el ${fechaCorta(suscripcion!.vence)}.`)) return;
+    if (!confirm(`¿Cancelar el cobro automático? Ya no se cobrará y tu plan sigue activo hasta el ${fechaCorta(suscripcion!.vence)}.`)) return;
     setError(''); setOk(''); setEnviando('cancelar');
-    try { await llamarPagos({ accion: 'suscripcion_cancelar' }); await recargar(); setOk('Mensualidad cancelada.'); }
+    try { await llamarPagos({ accion: 'suscripcion_cancelar' }); await recargar(); setOk('Cobro automático cancelado.'); }
     catch (e) { setError(mensajeError(e)); }
     setEnviando('');
   }
@@ -92,7 +116,7 @@ export default function Plan() {
               <strong>{fechaCorta(suscripcion.vence)}</strong>
             </div>
             <div><span className="tenue pequeno">Sucursales</span><strong>{suscripcion.negocios_max}</strong></div>
-            {pagando && <button className="btn btn-chico btn-peligro" disabled={!!enviando} onClick={cancelar}>Cancelar mensualidad</button>}
+            {pagando && <button className="btn btn-chico btn-peligro" disabled={!!enviando} onClick={cancelar}>Cancelar cobro automático</button>}
           </>
         ) : <p>Todavía no tienes plan.</p>}
       </section>
@@ -100,6 +124,11 @@ export default function Plan() {
       {enviando === 'verificar' && <Aviso tipo="info">Confirmando con Mercado Pago…</Aviso>}
       <Aviso>{error}</Aviso>
       <Aviso tipo="ok">{ok}</Aviso>
+
+      <div className="segmentado plan-ciclo" role="radiogroup" aria-label="Forma de pago">
+        <button role="radio" aria-checked={!anual} className={!anual ? 'activo' : ''} onClick={() => setAnual(false)}>Mensual</button>
+        <button role="radio" aria-checked={anual} className={anual ? 'activo' : ''} onClick={() => setAnual(true)}>Anual <small>2 meses gratis</small></button>
+      </div>
 
       <div className="plan-sucursales">
         <span>Sucursales a pagar</span>
@@ -113,27 +142,36 @@ export default function Plan() {
       <div className="planes">
         {PLANES.map((p) => {
           const precio = precios ? Number(p.nivel === 'completo' ? precios.completo : precios.basico) : null;
-          const actual = pagando && suscripcion?.nivel === p.nivel && suscripcion.negocios_max === sucursales;
+          const actual = pagando && suscripcion?.nivel === p.nivel && suscripcion.negocios_max === sucursales
+            && /anual/i.test(suscripcion.plan) === anual;
+          const total = precio != null ? precio * sucursales * (anual ? 10 : 1) : null;
           return (
             <article key={p.nivel} className={`tarjeta plan ${p.nivel === 'completo' ? 'plan-destacado' : ''}`}>
               {p.nivel === 'completo' && <span className="plan-cinta">Con tienda en línea</span>}
               <h2>{p.nombre}</h2>
               <p className="tenue">{p.lema}</p>
               <p className="plan-precio">
-                {precio != null ? dinero(precio * sucursales) : '…'}<small> / mes</small>
+                {total != null ? dinero(total) : '…'}<small>{anual ? ' / año' : ' / mes'}</small>
               </p>
-              {sucursales > 1 && precio != null && <p className="tenue pequeno">{dinero(precio)} por sucursal</p>}
+              {anual && precio != null && <p className="tenue pequeno">Equivale a {dinero(total! / 12)} al mes · ahorras {dinero(precio * sucursales * 2)}</p>}
+              {sucursales > 1 && precio != null && <p className="tenue pequeno">{dinero(precio)} por sucursal al mes</p>}
               <ul className="plan-lista">{p.incluye.map((x) => <li key={x}>{x}</li>)}</ul>
               <button className={`btn ancho ${p.nivel === 'completo' ? 'btn-primario' : ''}`} disabled={!!enviando || actual || precios?.cobro === false}
                 onClick={() => suscribir(p.nivel)}>
-                {actual ? 'Tu plan actual' : enviando === p.nivel ? 'Abriendo Mercado Pago…' : pagando ? 'Cambiar a este plan' : 'Suscribirme'}
+                {actual ? 'Tu plan actual' : enviando === p.nivel ? 'Abriendo Mercado Pago…' : pagando ? 'Cambiar a este plan' : anual ? 'Suscribirme cada año' : 'Suscribirme cada mes'}
+              </button>
+              <button className="btn btn-texto ancho" disabled={!!enviando || precios?.cobro === false} onClick={() => pagarUnaVez(p.nivel)}>
+                {enviando === `unico-${p.nivel}` ? 'Abriendo Mercado Pago…' : `Pagar ${anual ? '12 meses' : '1 mes'} una sola vez (OXXO o tarjeta)`}
               </button>
             </article>
           );
         })}
       </div>
       {precios?.cobro === false && <Aviso tipo="info">El cobro con tarjeta todavía no está activo. Por ahora pide un código de activación.</Aviso>}
-      <p className="tenue pequeno">El cobro es automático cada mes con Mercado Pago (tarjeta de crédito o débito). Puedes cancelar cuando quieras y tu plan sigue activo hasta el fin del mes pagado.</p>
+      <p className="tenue pequeno">
+        "Suscribirme" cobra solo cada {anual ? 'año' : 'mes'} con Mercado Pago (tarjeta de crédito o débito) y puedes cancelar cuando quieras; tu plan sigue activo hasta el fin del periodo pagado.
+        "Pagar una sola vez" no se renueva: pagas en efectivo en OXXO, con tarjeta o con saldo de Mercado Pago y el tiempo se suma a tu plan. Con OXXO el plan se activa en cuanto se acredita el pago.
+      </p>
 
       <section className="tarjeta mt">
         <h2>¿Tienes un código de activación?</h2>

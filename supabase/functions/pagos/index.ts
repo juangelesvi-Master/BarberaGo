@@ -16,11 +16,15 @@
 //        Aviso de Mercado Pago: consulta el pago y confirma la cita (o devuelve el dinero).
 //
 // Mensualidad de BarberaGo (suscripción recurrente a la cuenta de la plataforma, con la sesión del dueño):
-//   POST {accion:"suscribir", nivel:"basico"|"completo", sucursales}   → liga para autorizar el cobro mensual
+//   POST {accion:"suscribir", nivel, sucursales, anual}                → liga para autorizar el cobro mensual (o anual)
+//   POST {accion:"pago_unico", nivel, sucursales, meses: 1|12}         → liga de pago único (OXXO, tarjeta o saldo)
+//   POST {accion:"pago_unico_verificar", pago}                         → al volver de Mercado Pago aplica el pago
 //   POST {accion:"suscripcion_verificar"}                              → consulta a Mercado Pago y aplica el plan
 //   POST {accion:"suscripcion_cancelar"}                               → cancela los cobros futuros
 //   POST {accion:"plataforma_conectar", access_token}                  → solo el maestro: cuenta que recibe las mensualidades
-//   POST ?accion=webhook_plataforma                                    → aviso de Mercado Pago sobre suscripciones
+//   POST ?accion=webhook_plataforma                                    → aviso de Mercado Pago (suscripciones y pagos únicos)
+//
+// El plan anual cuesta 10 meses (2 gratis).
 //
 // La llave de cada barbería solo vive en privado.pago_cuentas; nunca llega al navegador.
 
@@ -255,6 +259,8 @@ type Preaprobacion = {
   id: string; status: string; external_reference: string | null; next_payment_date: string | null; init_point?: string;
 };
 const PREFIJO_SUS = 'sus:';
+const PREFIJO_UNICO = 'uni:';
+const MESES_ANUAL = 10; // 12 meses al precio de 10
 
 async function usuarioDe(req: Request) {
   const jwt = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
@@ -269,11 +275,23 @@ async function plataforma() {
   return p as Plataforma & { token: string };
 }
 
-/** La referencia es "sus:<usuario>:<nivel>:<sucursales>"; así nunca se aplica un pago a otra cuenta. */
+/** La referencia es "sus:<usuario>:<nivel>:<sucursales>[:a]"; así nunca se aplica un pago a otra cuenta. */
 function leerReferencia(ref: string | null) {
-  const [prefijo, usuario, nivel, sucursales] = String(ref || '').split(':');
+  const [prefijo, usuario, nivel, sucursales, anual] = String(ref || '').split(':');
   if (`${prefijo}:` !== PREFIJO_SUS || !UUID.test(usuario || '') || !['basico', 'completo'].includes(nivel)) return null;
-  return { usuario, nivel, sucursales: Math.max(1, Math.min(100, Number(sucursales) || 1)) };
+  return { usuario, nivel, sucursales: Math.max(1, Math.min(100, Number(sucursales) || 1)), anual: anual === 'a' };
+}
+
+/** Pago único: "uni:<usuario>:<nivel>:<sucursales>:<meses>". */
+function leerReferenciaUnica(ref: string | null) {
+  const [prefijo, usuario, nivel, sucursales, meses] = String(ref || '').split(':');
+  if (`${prefijo}:` !== PREFIJO_UNICO || !UUID.test(usuario || '') || !['basico', 'completo'].includes(nivel)) return null;
+  if (!['1', '12'].includes(meses)) return null;
+  return { usuario, nivel, sucursales: Math.max(1, Math.min(100, Number(sucursales) || 1)), meses: Number(meses) };
+}
+
+function precioPlan(p: Plataforma, nivel: string, sucursales: number, anual: boolean) {
+  return Number(nivel === 'completo' ? p.completo : p.basico) * sucursales * (anual ? MESES_ANUAL : 1);
 }
 
 /** Consulta una suscripción en Mercado Pago y la aplica a la cuenta que dice su referencia. */
@@ -285,7 +303,7 @@ async function aplicarPreaprobacion(token: string, id: string, usuarioEsperado?:
   if (!ref || (usuarioEsperado && ref.usuario !== usuarioEsperado)) return null;
   const s = await rpc<Record<string, unknown> | null>('suscripcion_aplicar', {
     p_usuario: ref.usuario, p_id: pre.id, p_estado: pre.status, p_nivel: ref.nivel,
-    p_sucursales: ref.sucursales, p_proximo: pre.next_payment_date,
+    p_sucursales: ref.sucursales, p_proximo: pre.next_payment_date, p_anual: ref.anual,
   });
   // Al cambiar de plan, la suscripción anterior deja de cobrarse.
   const vieja = s?.reemplazada as string | null | undefined;
@@ -297,17 +315,18 @@ async function suscribir(req: Request, b: Record<string, unknown>) {
   const usuario = await usuarioDe(req);
   const nivel = b.nivel === 'completo' ? 'completo' : 'basico';
   const sucursales = Math.max(1, Math.min(20, Math.floor(Number(b.sucursales) || 1)));
+  const anual = b.anual === true;
   const p = await plataforma();
-  const monto = Number(nivel === 'completo' ? p.completo : p.basico) * sucursales;
+  const monto = precioPlan(p, nivel, sucursales, anual);
   const origen = req.headers.get('origin') || '';
   const base = ORIGENES.includes(origen) ? origen : APP_URL;
   const r = await mp(p.token, '/preapproval', {
     method: 'POST',
     body: JSON.stringify({
-      reason: `BarberaGo Plan ${nivel === 'completo' ? 'Completo' : 'Básico'}${sucursales > 1 ? ` (${sucursales} sucursales)` : ''}`,
-      external_reference: `${PREFIJO_SUS}${usuario.id}:${nivel}:${sucursales}`,
+      reason: `BarberaGo Plan ${nivel === 'completo' ? 'Completo' : 'Básico'}${anual ? ' anual' : ''}${sucursales > 1 ? ` (${sucursales} sucursales)` : ''}`,
+      external_reference: `${PREFIJO_SUS}${usuario.id}:${nivel}:${sucursales}${anual ? ':a' : ''}`,
       payer_email: usuario.email,
-      auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: monto, currency_id: 'MXN' },
+      auto_recurring: { frequency: anual ? 12 : 1, frequency_type: 'months', transaction_amount: monto, currency_id: 'MXN' },
       back_url: `${base}/plan?suscripcion=1`,
       status: 'pending',
     }),
@@ -318,6 +337,63 @@ async function suscribir(req: Request, b: Record<string, unknown>) {
   }
   await rpc('suscripcion_pendiente', { p_usuario: usuario.id, p_id: r.datos.id });
   return json({ url: r.datos.init_point, monto });
+}
+
+/** Pago único con Checkout Pro: acepta OXXO, tarjeta y saldo de Mercado Pago. */
+async function pagoUnico(req: Request, b: Record<string, unknown>) {
+  const usuario = await usuarioDe(req);
+  const nivel = b.nivel === 'completo' ? 'completo' : 'basico';
+  const sucursales = Math.max(1, Math.min(20, Math.floor(Number(b.sucursales) || 1)));
+  const meses = Number(b.meses) === 12 ? 12 : 1;
+  const p = await plataforma();
+  const monto = precioPlan(p, nivel, sucursales, meses === 12);
+  const origen = req.headers.get('origin') || '';
+  const base = ORIGENES.includes(origen) ? origen : APP_URL;
+  const regreso = `${base}/plan?pago=1`;
+  const nombre = `BarberaGo Plan ${nivel === 'completo' ? 'Completo' : 'Básico'} · ${meses === 12 ? '12 meses' : '1 mes'}${sucursales > 1 ? ` (${sucursales} sucursales)` : ''}`;
+  const r = await mp(p.token, '/checkout/preferences', {
+    method: 'POST',
+    headers: { 'X-Idempotency-Key': `uni-${usuario.id}-${Date.now()}` },
+    body: JSON.stringify({
+      items: [{ id: `plan-${nivel}-${meses}`, title: nombre, quantity: 1, unit_price: monto, currency_id: 'MXN' }],
+      payer: { email: usuario.email },
+      external_reference: `${PREFIJO_UNICO}${usuario.id}:${nivel}:${sucursales}:${meses}`,
+      notification_url: `${SUPABASE_URL}/functions/v1/pagos?accion=webhook_plataforma`,
+      back_urls: { success: regreso, failure: regreso, pending: regreso },
+      ...(base.startsWith('https://') ? { auto_return: 'approved' } : {}),
+      payment_methods: { installments: 1 },
+      statement_descriptor: 'BARBERAGO',
+    }),
+  });
+  if (!r.ok || !r.datos?.init_point) {
+    console.error('Mercado Pago rechazó el pago único', r.status, r.datos);
+    throw new ErrorVisible('No se pudo iniciar el pago. Intenta de nuevo.');
+  }
+  return json({ url: r.datos.init_point, monto });
+}
+
+/** Aplica un pago único aprobado a la cuenta que dice su referencia. */
+async function aplicarPagoUnico(token: string, id: string, usuarioEsperado?: string) {
+  const r = await mp(token, `/v1/payments/${encodeURIComponent(id)}`);
+  if (!r.ok) return null;
+  const pago = r.datos as Pago;
+  const ref = leerReferenciaUnica(pago.external_reference);
+  if (!ref || (usuarioEsperado && ref.usuario !== usuarioEsperado)) return null;
+  if (pago.status !== 'approved') return { estado: pago.status };
+  await rpc('pago_unico_aplicar', {
+    p_usuario: ref.usuario, p_pago: String(pago.id), p_nivel: ref.nivel, p_sucursales: ref.sucursales,
+    p_meses: ref.meses, p_monto: pago.transaction_amount,
+  });
+  return { estado: pago.status };
+}
+
+async function pagoUnicoVerificar(req: Request, b: Record<string, unknown>) {
+  const usuario = await usuarioDe(req);
+  const id = String(b.pago || '');
+  if (!/^\d{5,20}$/.test(id)) return json({ estado: null });
+  const p = await plataforma();
+  const r = await aplicarPagoUnico(p.token, id, usuario.id);
+  return json({ estado: r?.estado || null });
 }
 
 async function suscripcionVerificar(req: Request) {
@@ -362,7 +438,9 @@ async function webhookPlataforma(url: URL, req: Request) {
   const p = await rpc<Plataforma>('plataforma_token', {});
   if (!p?.token) return json({ ok: true });
   // Nunca se confía en el aviso: se consulta la suscripción con la llave de BarberaGo.
-  if (tipo.includes('preapproval')) {
+  if (tipo === 'payment') {
+    await aplicarPagoUnico(p.token, id);
+  } else if (tipo.includes('preapproval')) {
     await aplicarPreaprobacion(p.token, id);
   } else if (tipo.includes('authorized_payment')) {
     const pago = await mp(p.token, `/authorized_payments/${encodeURIComponent(id)}`);
@@ -402,6 +480,8 @@ export async function manejar(req: Request): Promise<Response> {
       case 'conectar': return await conectar(req, b);
       case 'suscribir': return await suscribir(req, b);
       case 'suscripcion_verificar': return await suscripcionVerificar(req);
+      case 'pago_unico': return await pagoUnico(req, b);
+      case 'pago_unico_verificar': return await pagoUnicoVerificar(req, b);
       case 'suscripcion_cancelar': return await suscripcionCancelar(req);
       case 'plataforma_conectar': return await plataformaConectar(req, b);
       default: return json({ error: 'Acción no válida' }, 400);
