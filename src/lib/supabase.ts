@@ -22,13 +22,23 @@ export function mensajeError(e: unknown): string {
   return m;
 }
 
-/** Llama la Edge Function de pagos (Mercado Pago) y devuelve su respuesta o lanza el error legible. */
-export async function llamarPagos<T>(cuerpo: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.functions.invoke('pagos', { body: cuerpo });
+/** Llama una Edge Function y devuelve su respuesta o lanza el error legible. */
+async function llamarFuncion<T>(nombre: string, cuerpo: Record<string, unknown>, porDefecto: string): Promise<T> {
+  const { data, error } = await supabase.functions.invoke(nombre, { body: cuerpo });
   if (error) {
     const ctx = (error as { context?: Response }).context;
     const detalle = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null;
-    throw new Error(detalle?.error || 'No se pudo conectar con el sistema de pagos. Intenta de nuevo.');
+    throw new Error(detalle?.error || porDefecto);
   }
   return data as T;
+}
+
+/** Edge Function de pagos (Mercado Pago). */
+export function llamarPagos<T>(cuerpo: Record<string, unknown>): Promise<T> {
+  return llamarFuncion<T>('pagos', cuerpo, 'No se pudo conectar con el sistema de pagos. Intenta de nuevo.');
+}
+
+/** Edge Function del personal con código de acceso. */
+export function llamarPersonal<T>(cuerpo: Record<string, unknown>): Promise<T> {
+  return llamarFuncion<T>('personal', cuerpo, 'No se pudo completar. Intenta de nuevo.');
 }

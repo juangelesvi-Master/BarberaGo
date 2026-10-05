@@ -2,14 +2,16 @@ import { useState, type FormEvent } from 'react';
 import { supabase, mensajeError } from '../lib/supabase';
 import { Marca } from '../components/Iconos';
 import { Aviso, Campo } from '../components/ui';
+import { credencialesDeCodigo, normalizarCodigo } from '../lib/codigoAcceso';
 
-type Modo = 'entrar' | 'registro' | 'recuperar';
+type Modo = 'entrar' | 'registro' | 'recuperar' | 'codigo';
 
 export default function Entrar() {
   const [modo, setModo] = useState<Modo>('entrar');
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [clave, setClave] = useState('');
+  const [codigo, setCodigo] = useState('');
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -18,7 +20,12 @@ export default function Entrar() {
     e.preventDefault();
     setError(''); setOk(''); setEnviando(true);
     try {
-      if (modo === 'entrar') {
+      if (modo === 'codigo') {
+        const limpio = normalizarCodigo(codigo);
+        if (limpio.length !== 10) throw new Error('El código tiene 10 letras y números, por ejemplo 7KQ4M-X9TB2');
+        const { error } = await supabase.auth.signInWithPassword(await credencialesDeCodigo(limpio));
+        if (error) throw new Error(error.message.includes('Invalid login') ? 'Código incorrecto. Pídele uno nuevo al administrador' : error.message);
+      } else if (modo === 'entrar') {
         const { error } = await supabase.auth.signInWithPassword({ email, password: clave });
         if (error) throw error;
       } else if (modo === 'registro') {
@@ -38,6 +45,27 @@ export default function Entrar() {
     } finally {
       setEnviando(false);
     }
+  }
+
+  if (modo === 'codigo') {
+    return (
+      <div className="pantalla-centro">
+        <form className="tarjeta acceso" onSubmit={enviar}>
+          <Marca grande />
+          <p className="kicker">Portal barberos</p>
+          <p className="tenue">Entra con el código que te dio el administrador de tu barbería.</p>
+          <Campo etiqueta="Código de acceso">
+            <input className="codigo-acceso" value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} required
+              autoComplete="off" autoCapitalize="characters" spellCheck={false} placeholder="XXXXX-XXXXX" maxLength={14} />
+          </Campo>
+          <Aviso>{error}</Aviso>
+          <button className="btn btn-primario ancho" disabled={enviando}>Entrar</button>
+          <div className="enlaces-acceso">
+            <button type="button" className="btn-texto" onClick={() => { setModo('entrar'); setError(''); }}>Soy dueño · entrar con correo</button>
+          </div>
+        </form>
+      </div>
+    );
   }
 
   return (
@@ -69,6 +97,8 @@ export default function Entrar() {
           {modo !== 'registro' && <button type="button" className="btn-texto" onClick={() => setModo('registro')}>Crear cuenta nueva</button>}
           {modo === 'entrar' && <button type="button" className="btn-texto" onClick={() => setModo('recuperar')}>Olvidé mi contraseña</button>}
         </div>
+        <div className="separador-acceso"><span>¿Trabajas en una barbería?</span></div>
+        <button type="button" className="btn ancho" onClick={() => { setModo('codigo'); setError(''); setOk(''); }}>Portal barberos</button>
       </form>
     </div>
   );

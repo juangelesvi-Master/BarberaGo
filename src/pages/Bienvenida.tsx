@@ -38,6 +38,20 @@ export default function Bienvenida() {
   }
 
   const dentro = negocios.length > 0;
+  if (session?.user.app_metadata?.personal && !dentro) {
+    // Cuenta del Portal barberos sin barbería activa: el administrador la desactivó.
+    return (
+      <div className="pantalla-centro">
+        <div className="tarjeta acceso">
+          <Marca grande />
+          <h2>Tu acceso está pausado</h2>
+          <p className="tenue">El administrador de tu barbería desactivó tu código. Pídele que lo vuelva a activar o que te dé uno nuevo.</p>
+          <button className="btn ancho" onClick={() => recargar()}>Volver a intentar</button>
+          <button className="btn-texto" onClick={salir}>Cerrar sesión</button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={dentro ? 'pagina angosta' : 'pantalla-centro'}>
       <div className="tarjeta acceso">

@@ -520,3 +520,13 @@ code { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; color: var
 .enlace-plan { display: flex; gap: .6rem; align-items: center; padding: .6rem .75rem; border-radius: 6px; color: var(--lateral-texto); text-decoration: none; opacity: .85; }
 .enlace-plan .icono { width: 18px; height: 18px; color: var(--oro); }
 .enlace-plan:hover, .enlace-plan.activo { background: var(--superficie); opacity: 1; }
+
+/* ───────── Portal barberos (código de acceso) ───────── */
+.separador-acceso { display: flex; align-items: center; gap: .75rem; color: var(--texto-2); font-size: .8rem; margin: .5rem 0 0; }
+.separador-acceso::before, .separador-acceso::after { content: ''; flex: 1; border-top: 1px solid var(--borde); }
+input.codigo-acceso { font-family: var(--display), monospace; font-size: 1.4rem; letter-spacing: .18em; text-align: center; text-transform: uppercase; }
+.codigo-grande { font-family: var(--display), monospace; font-size: 2rem; letter-spacing: .15em; text-align: center; color: var(--oro-claro);
+  background: var(--superficie-2); border: 1px dashed var(--oro); border-radius: var(--radio); padding: .9rem .5rem; margin: .5rem 0; user-select: all; }
+.pestanas-chicas { display: flex; gap: .25rem; background: var(--superficie-2); border-radius: var(--radio); padding: .25rem; }
+.pestanas-chicas button { flex: 1; background: none; border: 0; color: var(--texto-2); padding: .5rem; border-radius: calc(var(--radio) - 2px); cursor: pointer; font: inherit; }
+.pestanas-chicas button.activa { background: var(--superficie); color: var(--texto); box-shadow: 0 0 0 1px var(--borde); }

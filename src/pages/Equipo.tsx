@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { supabase, mensajeError } from '../lib/supabase';
+import { supabase, mensajeError, llamarPersonal } from '../lib/supabase';
 import { useNegocio } from '../lib/sesion';
 import { PERMISOS, type Barbero, type Miembro, type Permiso } from '../lib/tipos';
 import { Aviso, Cabecera, Campo, Modal } from '../components/ui';
@@ -15,6 +15,7 @@ export default function Equipo() {
   const [editarBarbero, setEditarBarbero] = useState<Barbero | 'nuevo' | null>(null);
   const [editarMiembro, setEditarMiembro] = useState<Miembro | null>(null);
   const [invitar, setInvitar] = useState(false);
+  const [codigo, setCodigo] = useState<{ nombre: string; codigo: string } | null>(null);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.from('miembros').select('*').eq('negocio_id', negocio.id).order('created_at');
@@ -49,6 +50,7 @@ export default function Equipo() {
       <Cabecera titulo="Cuentas con acceso">
         <button className="btn" onClick={() => setInvitar(true)}>+ Agregar persona</button>
       </Cabecera>
+      <p className="tenue pequeno">Agrega a tu personal por nombre: la app genera un código y entran en <strong>Portal barberos</strong>, sin correo.</p>
       <ul className="lista">
         {miembros.map((m) => (
           <li key={m.usuario_id} className={m.activo ? '' : 'inactivo'}>
@@ -56,7 +58,7 @@ export default function Equipo() {
               <div className="crece">
                 <strong>{m.nombre || m.email}</strong>{m.usuario_id === session?.user.id && <span className="tenue"> (tú)</span>}
                 <div className="tenue pequeno">
-                  {ROLES[m.rol]} · {m.email}
+                  {ROLES[m.rol]} · {m.acceso_codigo ? 'entra con código' : m.email}
                   {m.barbero_id && ` · agenda de ${barberos.find((b) => b.id === m.barbero_id)?.nombre}`}
                 </div>
               </div>
@@ -68,9 +70,12 @@ export default function Equipo() {
 
       {editarBarbero && <FormBarbero barbero={editarBarbero === 'nuevo' ? null : editarBarbero} onCerrar={() => setEditarBarbero(null)}
         onGuardado={() => { setEditarBarbero(null); recargarCatalogo(); }} />}
-      {invitar && <FormInvitar onCerrar={() => setInvitar(false)} onGuardado={() => { setInvitar(false); cargar(); }} />}
+      {invitar && <FormInvitar onCerrar={() => setInvitar(false)}
+        onGuardado={(nuevo) => { setInvitar(false); cargar(); recargarCatalogo(); if (nuevo) setCodigo(nuevo); }} />}
       {editarMiembro && <FormMiembro miembro={editarMiembro} onCerrar={() => setEditarMiembro(null)}
+        onCodigo={(c) => { setEditarMiembro(null); setCodigo({ nombre: editarMiembro.nombre, codigo: c }); }}
         onGuardado={() => { setEditarMiembro(null); cargar(); recargar(); }} />}
+      {codigo && <VerCodigo {...codigo} onCerrar={() => setCodigo(null)} />}
     </div>
   );
 }
@@ -137,25 +142,56 @@ function FormBarbero({ barbero, onCerrar, onGuardado }: { barbero: Barbero | nul
   );
 }
 
-function FormInvitar({ onCerrar, onGuardado }: { onCerrar: () => void; onGuardado: () => void }) {
+type Nuevo = { nombre: string; codigo: string };
+
+function FormInvitar({ onCerrar, onGuardado }: { onCerrar: () => void; onGuardado: (nuevo?: Nuevo) => void }) {
   const { negocio, barberos } = useNegocio();
+  const [conCodigo, setConCodigo] = useState(true);
+  const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [rol, setRol] = useState<Miembro['rol']>('barbero');
-  const [barberoId, setBarberoId] = useState('');
+  const [barberoId, setBarberoId] = useState('nueva');
   const [error, setError] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
   async function guardar(e: FormEvent) {
     e.preventDefault();
-    const { error } = await supabase.rpc('agregar_miembro', { p_negocio: negocio.id, p_email: email, p_rol: rol, p_barbero: barberoId || null });
-    if (error) return setError(mensajeError(error));
-    onGuardado();
+    setError(''); setEnviando(true);
+    try {
+      if (conCodigo) {
+        const r = await llamarPersonal<{ codigo: string }>({ accion: 'crear', negocio: negocio.id, nombre, rol, barbero: barberoId || null });
+        onGuardado({ nombre: nombre.trim(), codigo: r.codigo });
+      } else {
+        const { error } = await supabase.rpc('agregar_miembro', {
+          p_negocio: negocio.id, p_email: email, p_rol: rol, p_barbero: barberoId && barberoId !== 'nueva' ? barberoId : null,
+        });
+        if (error) throw error;
+        onGuardado();
+      }
+    } catch (err) { setError(mensajeError(err)); }
+    setEnviando(false);
   }
 
   return (
     <Modal titulo="Agregar persona" onCerrar={onCerrar}>
       <form onSubmit={guardar} className="formulario">
-        <p className="tenue pequeno">La persona primero crea su cuenta en BarberaGo con su correo. Después la agregas aquí y al entrar verá esta barbería.</p>
-        <Campo etiqueta="Correo"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Campo>
+        <div className="pestanas-chicas" role="tablist">
+          <button type="button" role="tab" aria-selected={conCodigo} className={conCodigo ? 'activa' : ''}
+            onClick={() => { setConCodigo(true); setBarberoId('nueva'); }}>Con código</button>
+          <button type="button" role="tab" aria-selected={!conCodigo} className={!conCodigo ? 'activa' : ''}
+            onClick={() => { setConCodigo(false); setBarberoId(''); }}>Con correo</button>
+        </div>
+        {conCodigo ? (
+          <>
+            <p className="tenue pequeno">No necesita correo. Al guardar te damos un código para que entre en <strong>Portal barberos</strong>.</p>
+            <Campo etiqueta="Nombre"><input value={nombre} onChange={(e) => setNombre(e.target.value)} required maxLength={60} placeholder="Ej. Carlos" /></Campo>
+          </>
+        ) : (
+          <>
+            <p className="tenue pequeno">La persona primero crea su cuenta en BarberaGo con su correo. Después la agregas aquí y al entrar verá esta barbería.</p>
+            <Campo etiqueta="Correo"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Campo>
+          </>
+        )}
         <Campo etiqueta="Rol">
           <select value={rol} onChange={(e) => setRol(e.target.value as Miembro['rol'])}>
             {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -163,22 +199,48 @@ function FormInvitar({ onCerrar, onGuardado }: { onCerrar: () => void; onGuardad
         </Campo>
         <Campo etiqueta="Su agenda">
           <select value={barberoId} onChange={(e) => setBarberoId(e.target.value)}>
-            <option value="">No atiende clientes</option>
+            {conCodigo && <option value="nueva">Nueva agenda con su nombre</option>}
             {barberos.map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+            <option value="">No atiende clientes</option>
           </select>
         </Campo>
         <Aviso>{error}</Aviso>
         <div className="acciones">
           <button type="button" className="btn" onClick={onCerrar}>Cancelar</button>
-          <button className="btn btn-primario">Agregar</button>
+          <button className="btn btn-primario" disabled={enviando}>{enviando ? 'Guardando…' : conCodigo ? 'Crear y ver código' : 'Agregar'}</button>
         </div>
       </form>
     </Modal>
   );
 }
 
-function FormMiembro({ miembro, onCerrar, onGuardado }: { miembro: Miembro; onCerrar: () => void; onGuardado: () => void }) {
-  const { barberos } = useNegocio();
+/** Muestra el código una sola vez (no se guarda; si se pierde se genera otro). */
+function VerCodigo({ nombre, codigo, onCerrar }: Nuevo & { onCerrar: () => void }) {
+  const [copiado, setCopiado] = useState(false);
+  const texto = `Hola ${nombre}, entra a BarberaGo en ${window.location.origin}, toca "Portal barberos" y escribe tu código: ${codigo}`;
+  async function copiar() {
+    try { await navigator.clipboard.writeText(codigo); setCopiado(true); } catch { /* el código se puede seleccionar a mano */ }
+  }
+  return (
+    <Modal titulo={`Código de ${nombre}`} onCerrar={onCerrar}>
+      <div className="formulario">
+        <p className="tenue">Dáselo a {nombre}. Entra en <strong>Portal barberos</strong> en la pantalla de inicio de sesión.</p>
+        <div className="codigo-grande" aria-label="Código de acceso">{codigo}</div>
+        <Aviso tipo="info">Guárdalo o envíalo ahora: por seguridad no lo volverás a ver. Si se pierde, genera uno nuevo desde su ficha.</Aviso>
+        <div className="acciones">
+          <button type="button" className="btn" onClick={copiar}>{copiado ? 'Copiado' : 'Copiar código'}</button>
+          <a className="btn" href={`https://wa.me/?text=${encodeURIComponent(texto)}`} target="_blank" rel="noreferrer">Enviar por WhatsApp</a>
+          <button type="button" className="btn btn-primario" onClick={onCerrar}>Listo</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function FormMiembro({ miembro, onCerrar, onGuardado, onCodigo }: { miembro: Miembro; onCerrar: () => void; onGuardado: () => void; onCodigo: (codigo: string) => void }) {
+  const { barberos, negocio } = useNegocio();
+  const [nombre, setNombre] = useState(miembro.nombre);
+  const [enviando, setEnviando] = useState(false);
   const [rol, setRol] = useState(miembro.rol);
   const [permisos, setPermisos] = useState<Permiso[]>(miembro.permisos);
   const [barberoId, setBarberoId] = useState(miembro.barbero_id || '');
@@ -188,7 +250,7 @@ function FormMiembro({ miembro, onCerrar, onGuardado }: { miembro: Miembro; onCe
   async function guardar(e: FormEvent) {
     e.preventDefault();
     const { error } = await supabase.from('miembros')
-      .update({ rol, permisos, barbero_id: barberoId || null, activo })
+      .update({ rol, permisos, barbero_id: barberoId || null, activo, ...(miembro.acceso_codigo ? { nombre: nombre.trim() || miembro.nombre } : {}) })
       .eq('negocio_id', miembro.negocio_id).eq('usuario_id', miembro.usuario_id);
     if (error) return setError(mensajeError(error));
     onGuardado();
@@ -196,14 +258,41 @@ function FormMiembro({ miembro, onCerrar, onGuardado }: { miembro: Miembro; onCe
 
   async function quitar() {
     if (!confirm(`¿Quitar el acceso de ${miembro.nombre || miembro.email}?`)) return;
+    if (miembro.acceso_codigo) {
+      // La cuenta con código solo existe para esta barbería: se borra completa.
+      setEnviando(true);
+      try { await llamarPersonal({ accion: 'eliminar', negocio: negocio.id, usuario: miembro.usuario_id }); onGuardado(); }
+      catch (err) { setError(mensajeError(err)); }
+      setEnviando(false);
+      return;
+    }
     const { error } = await supabase.from('miembros').delete().eq('negocio_id', miembro.negocio_id).eq('usuario_id', miembro.usuario_id);
     if (error) return setError(mensajeError(error));
     onGuardado();
   }
 
+  async function nuevoCodigo() {
+    if (!confirm(`¿Generar un código nuevo para ${miembro.nombre}? El código anterior dejará de servir.`)) return;
+    setError(''); setEnviando(true);
+    try {
+      const r = await llamarPersonal<{ codigo: string }>({ accion: 'nuevo_codigo', negocio: negocio.id, usuario: miembro.usuario_id });
+      onCodigo(r.codigo);
+    } catch (err) { setError(mensajeError(err)); }
+    setEnviando(false);
+  }
+
   return (
     <Modal titulo={miembro.nombre || miembro.email || 'Persona'} onCerrar={onCerrar}>
       <form onSubmit={guardar} className="formulario">
+        {miembro.acceso_codigo && (
+          <>
+            <Campo etiqueta="Nombre"><input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={60} required /></Campo>
+            <div className="fila">
+              <span className="tenue pequeno crece">Entra con código en Portal barberos.</span>
+              <button type="button" className="btn btn-chico" disabled={enviando} onClick={nuevoCodigo}>Generar código nuevo</button>
+            </div>
+          </>
+        )}
         <Campo etiqueta="Rol">
           <select value={rol} onChange={(e) => setRol(e.target.value as Miembro['rol'])}>
             {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -232,7 +321,7 @@ function FormMiembro({ miembro, onCerrar, onGuardado }: { miembro: Miembro; onCe
         <label className="check"><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} /> Acceso activo</label>
         <Aviso>{error}</Aviso>
         <div className="acciones">
-          <button type="button" className="btn btn-peligro" onClick={quitar}>Quitar acceso</button>
+          <button type="button" className="btn btn-peligro" disabled={enviando} onClick={quitar}>Quitar acceso</button>
           <button type="button" className="btn" onClick={onCerrar}>Cancelar</button>
           <button className="btn btn-primario">Guardar</button>
         </div>

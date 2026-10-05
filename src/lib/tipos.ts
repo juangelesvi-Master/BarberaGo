@@ -65,6 +65,8 @@ export interface Miembro {
   nombre: string;
   email: string | null;
   barbero_id: string | null;
+  /** Entra con código en el Portal barberos (sin correo). */
+  acceso_codigo: boolean;
 }
 
 export interface Barbero {
