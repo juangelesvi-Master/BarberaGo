@@ -1,7 +1,9 @@
+import type { ReactElement } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { SesionProvider, useSesion } from './lib/sesion';
 import Layout, { Mas } from './components/Layout';
 import { Cargando } from './components/ui';
+import type { Permiso } from './lib/tipos';
 import Entrar from './pages/Entrar';
 import Bienvenida from './pages/Bienvenida';
 import Agenda from './pages/Agenda';
@@ -31,22 +33,25 @@ function Interno() {
   if (esMaestro && pathname.startsWith('/maestro')) return <Maestro />;
   if (!negocio || !miembro) return <Bienvenida />;
   const inicio = puede('agenda') ? '/agenda' : puede('cobrar') ? '/cobrar' : '/mas';
+  // Cada pantalla exige su permiso aunque se escriba la ruta a mano (la base también lo exige).
+  const con = (p: Permiso, pagina: ReactElement) => (puede(p) ? pagina : <Navigate to={inicio} replace />);
+  const esDueno = negocio.creado_por === session.user.id;
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/agenda" element={<Agenda />} />
-        <Route path="/cobrar" element={<Cobrar />} />
-        <Route path="/pedidos" element={<Pedidos />} />
-        <Route path="/clientes" element={<Clientes />} />
-        <Route path="/ventas" element={<Ventas />} />
-        <Route path="/reportes" element={<Reportes />} />
-        <Route path="/servicios" element={<Servicios />} />
-        <Route path="/productos" element={<Productos />} />
-        <Route path="/equipo" element={<Equipo />} />
-        <Route path="/ajustes" element={<Ajustes />} />
+        <Route path="/agenda" element={con('agenda', <Agenda />)} />
+        <Route path="/cobrar" element={con('cobrar', <Cobrar />)} />
+        <Route path="/pedidos" element={con('cobrar', <Pedidos />)} />
+        <Route path="/clientes" element={con('clientes', <Clientes />)} />
+        <Route path="/ventas" element={con('caja', <Ventas />)} />
+        <Route path="/reportes" element={con('reportes', <Reportes />)} />
+        <Route path="/servicios" element={con('catalogo', <Servicios />)} />
+        <Route path="/productos" element={con('inventario', <Productos />)} />
+        <Route path="/equipo" element={con('equipo', <Equipo />)} />
+        <Route path="/ajustes" element={con('ajustes', <Ajustes />)} />
         <Route path="/mas" element={<Mas />} />
-        <Route path="/plan" element={<Plan />} />
-        <Route path="/nueva-barberia" element={<Bienvenida />} />
+        <Route path="/plan" element={esDueno ? <Plan /> : <Navigate to={inicio} replace />} />
+        <Route path="/nueva-barberia" element={miembro.rol === 'admin' && !session.user.app_metadata?.personal ? <Bienvenida /> : <Navigate to={inicio} replace />} />
         <Route path="*" element={<Navigate to={inicio} replace />} />
       </Route>
     </Routes>
