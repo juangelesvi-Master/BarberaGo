@@ -71,7 +71,7 @@ export default function Equipo() {
       {editarBarbero && <FormBarbero barbero={editarBarbero === 'nuevo' ? null : editarBarbero} onCerrar={() => setEditarBarbero(null)}
         onGuardado={() => { setEditarBarbero(null); recargarCatalogo(); }} />}
       {invitar && <FormInvitar onCerrar={() => setInvitar(false)}
-        onGuardado={(nuevo) => { setInvitar(false); cargar(); recargarCatalogo(); if (nuevo) setCodigo(nuevo); }} />}
+        onGuardado={(nuevo) => { setInvitar(false); cargar(); recargarCatalogo(); setCodigo(nuevo); }} />}
       {editarMiembro && <FormMiembro miembro={editarMiembro} onCerrar={() => setEditarMiembro(null)}
         onCodigo={(c) => { setEditarMiembro(null); setCodigo({ nombre: editarMiembro.nombre, codigo: c }); }}
         onGuardado={() => { setEditarMiembro(null); cargar(); recargar(); }} />}
@@ -144,11 +144,9 @@ function FormBarbero({ barbero, onCerrar, onGuardado }: { barbero: Barbero | nul
 
 type Nuevo = { nombre: string; codigo: string };
 
-function FormInvitar({ onCerrar, onGuardado }: { onCerrar: () => void; onGuardado: (nuevo?: Nuevo) => void }) {
+function FormInvitar({ onCerrar, onGuardado }: { onCerrar: () => void; onGuardado: (nuevo: Nuevo) => void }) {
   const { negocio, barberos } = useNegocio();
-  const [conCodigo, setConCodigo] = useState(true);
   const [nombre, setNombre] = useState('');
-  const [email, setEmail] = useState('');
   const [rol, setRol] = useState<Miembro['rol']>('barbero');
   const [barberoId, setBarberoId] = useState('nueva');
   const [error, setError] = useState('');
@@ -158,16 +156,8 @@ function FormInvitar({ onCerrar, onGuardado }: { onCerrar: () => void; onGuardad
     e.preventDefault();
     setError(''); setEnviando(true);
     try {
-      if (conCodigo) {
-        const r = await llamarPersonal<{ codigo: string }>({ accion: 'crear', negocio: negocio.id, nombre, rol, barbero: barberoId || null });
-        onGuardado({ nombre: nombre.trim(), codigo: r.codigo });
-      } else {
-        const { error } = await supabase.rpc('agregar_miembro', {
-          p_negocio: negocio.id, p_email: email, p_rol: rol, p_barbero: barberoId && barberoId !== 'nueva' ? barberoId : null,
-        });
-        if (error) throw error;
-        onGuardado();
-      }
+      const r = await llamarPersonal<{ codigo: string }>({ accion: 'crear', negocio: negocio.id, nombre, rol, barbero: barberoId || null });
+      onGuardado({ nombre: nombre.trim(), codigo: r.codigo });
     } catch (err) { setError(mensajeError(err)); }
     setEnviando(false);
   }
@@ -175,23 +165,8 @@ function FormInvitar({ onCerrar, onGuardado }: { onCerrar: () => void; onGuardad
   return (
     <Modal titulo="Agregar persona" onCerrar={onCerrar}>
       <form onSubmit={guardar} className="formulario">
-        <div className="pestanas-chicas" role="tablist">
-          <button type="button" role="tab" aria-selected={conCodigo} className={conCodigo ? 'activa' : ''}
-            onClick={() => { setConCodigo(true); setBarberoId('nueva'); }}>Con código</button>
-          <button type="button" role="tab" aria-selected={!conCodigo} className={!conCodigo ? 'activa' : ''}
-            onClick={() => { setConCodigo(false); setBarberoId(''); }}>Con correo</button>
-        </div>
-        {conCodigo ? (
-          <>
-            <p className="tenue pequeno">No necesita correo. Al guardar te damos un código para que entre en <strong>Portal barberos</strong>.</p>
-            <Campo etiqueta="Nombre"><input value={nombre} onChange={(e) => setNombre(e.target.value)} required maxLength={60} placeholder="Ej. Carlos" /></Campo>
-          </>
-        ) : (
-          <>
-            <p className="tenue pequeno">La persona primero crea su cuenta en BarberaGo con su correo. Después la agregas aquí y al entrar verá esta barbería.</p>
-            <Campo etiqueta="Correo"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Campo>
-          </>
-        )}
+        <p className="tenue pequeno">No necesita correo. Al guardar te damos un código para que entre en <strong>Portal barberos</strong>.</p>
+        <Campo etiqueta="Nombre"><input value={nombre} onChange={(e) => setNombre(e.target.value)} required maxLength={60} placeholder="Ej. Carlos" /></Campo>
         <Campo etiqueta="Rol">
           <select value={rol} onChange={(e) => setRol(e.target.value as Miembro['rol'])}>
             {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -199,7 +174,7 @@ function FormInvitar({ onCerrar, onGuardado }: { onCerrar: () => void; onGuardad
         </Campo>
         <Campo etiqueta="Su agenda">
           <select value={barberoId} onChange={(e) => setBarberoId(e.target.value)}>
-            {conCodigo && <option value="nueva">Nueva agenda con su nombre</option>}
+            <option value="nueva">Nueva agenda con su nombre</option>
             {barberos.map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
             <option value="">No atiende clientes</option>
           </select>
@@ -207,7 +182,7 @@ function FormInvitar({ onCerrar, onGuardado }: { onCerrar: () => void; onGuardad
         <Aviso>{error}</Aviso>
         <div className="acciones">
           <button type="button" className="btn" onClick={onCerrar}>Cancelar</button>
-          <button className="btn btn-primario" disabled={enviando}>{enviando ? 'Guardando…' : conCodigo ? 'Crear y ver código' : 'Agregar'}</button>
+          <button className="btn btn-primario" disabled={enviando}>{enviando ? 'Guardando…' : 'Crear y ver código'}</button>
         </div>
       </form>
     </Modal>

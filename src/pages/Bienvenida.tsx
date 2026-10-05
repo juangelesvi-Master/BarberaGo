@@ -82,9 +82,8 @@ export default function Bienvenida() {
         {!dentro && (
           <>
             <p className="tenue pequeno">
-              ¿Trabajas en una barbería? Pide al administrador que te agregue con tu correo <strong>{session?.user.email}</strong> y vuelve a entrar.
+              ¿Trabajas en una barbería? Pide al administrador tu código de acceso y entra en <strong>Portal barberos</strong>.
             </p>
-            <button className="btn-texto" onClick={() => recargar()}>Ya me agregaron</button>
             {esMaestro && <Link to="/maestro" className="btn ancho">Abrir panel maestro</Link>}
             <button className="btn-texto" onClick={salir}>Cerrar sesión</button>
           </>
