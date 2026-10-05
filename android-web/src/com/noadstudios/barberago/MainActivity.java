@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.CookieManager;
+import android.webkit.DownloadListener;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -46,6 +47,17 @@ public class MainActivity extends Activity {
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
         // Impresión de tickets (red o diálogo de Android). Solo se cargan páginas de BarberaGo en esta vista.
         web.addJavascriptInterface(new Impresora(this), "BarberaGoNativo");
+        // Las descargas (por ejemplo una versión nueva del APK) se abren en el navegador.
+        web.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String agente, String disposicion, String tipo, long largo) {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                } catch (ActivityNotFoundException e) {
+                    // Sin navegador: se ignora.
+                }
+            }
+        });
 
         web.setWebViewClient(new WebViewClient() {
             // API 24+ (no está en el android.jar 23 con el que se compila, pero Android la llama igual).

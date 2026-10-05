@@ -8,6 +8,10 @@ type Modo = 'entrar' | 'registro' | 'recuperar' | 'codigo';
 
 /** Dentro de la app de Android no se ofrece descargarla. */
 const enApp = navigator.userAgent.includes('BarberaGoAndroid');
+// La app 1.0 no tiene impresión de tickets: se le ofrece la versión nueva.
+const appVieja = /BarberaGoAndroid\/1\.0\b/.test(navigator.userAgent);
+// La app 1.0 no sabe descargar archivos; con el dominio en mayúsculas la abre en el navegador, que sí descarga.
+const APK_FUERA = 'https://BarberaGo.restorago.com/descargas/BarberaGo.apk';
 
 export default function Entrar() {
   const [modo, setModo] = useState<Modo>('entrar');
@@ -102,7 +106,12 @@ export default function Entrar() {
         </div>
         <div className="separador-acceso"><span>¿Trabajas en una barbería?</span></div>
         <button type="button" className="btn ancho" onClick={() => { setModo('codigo'); setError(''); setOk(''); }}>Portal barberos</button>
-        {!enApp && <a className="btn-texto descargar-app" href="/descargas/BarberaGo.apk" download>Descargar la app para Android</a>}
+        {(!enApp || appVieja) && (
+          <a className="btn ancho btn-descargar" href={appVieja ? APK_FUERA : '/descargas/BarberaGo.apk'} download="BarberaGo.apk">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M17.6 9.48l1.84-3.18a.38.38 0 00-.66-.38l-1.86 3.22a11.4 11.4 0 00-9.84 0L5.22 5.92a.38.38 0 10-.66.38L6.4 9.48A10.8 10.8 0 001 18h22a10.8 10.8 0 00-5.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z" /></svg>
+            {appVieja ? 'Actualizar la app' : 'Descargar la app para Android'}
+          </a>
+        )}
         {modo === 'registro' && <a className="btn-texto descargar-app" href="/promo">¿Qué incluye BarberaGo?</a>}
       </form>
     </div>
