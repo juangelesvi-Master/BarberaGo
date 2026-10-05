@@ -11,6 +11,24 @@ export function guardarAncho(a: AnchoTicket) {
   try { localStorage.setItem(CLAVE, a); } catch { /* sin almacenamiento: no pasa nada */ }
 }
 
+/** Puente de la app BarberaGo para Android (android-web/…/Impresora.java). */
+type Nativo = { version(): string; imprimirRed(ip: string, puerto: number, base64: string): string; imprimirHtml(html: string, titulo: string): void };
+const nativo = () => (window as unknown as { BarberaGoNativo?: Nativo }).BarberaGoNativo;
+export const enAppAndroid = () => !!nativo();
+
+/** Impresora térmica de red de este dispositivo (solo la usa la app de Android). */
+export type ImpresoraRed = { ip: string; puerto: number };
+const CLAVE_RED = 'barberago-impresora-red';
+export function impresoraGuardada(): ImpresoraRed | null {
+  try {
+    const d = JSON.parse(localStorage.getItem(CLAVE_RED) || 'null');
+    return d?.ip ? { ip: String(d.ip), puerto: Number(d.puerto) || 9100 } : null;
+  } catch { return null; }
+}
+export function guardarImpresora(r: ImpresoraRed | null) {
+  try { if (r?.ip) localStorage.setItem(CLAVE_RED, JSON.stringify(r)); else localStorage.removeItem(CLAVE_RED); } catch { /* nada */ }
+}
+
 export type DatosTicket = {
   negocio: string; direccion?: string | null; telefono?: string | null; moneda: string;
   folio: number; fecha: Date; cliente?: string; barbero?: string;
@@ -62,8 +80,117 @@ ${d.anulada ? '<div class="anulada">VENTA ANULADA</div>' : ''}
 </div></body></html>`;
 }
 
-/** Imprime el ticket en un marco oculto (el navegador abre su ventana de impresión). */
+// ───────────── ESC/POS para impresoras térmicas de red ─────────────
+
+// Página de códigos 850 (la que traen casi todas las térmicas) para los acentos del español.
+const CP850: Record<string, number> = {
+  'á': 0xa0, 'é': 0x82, 'í': 0xa1, 'ó': 0xa2, 'ú': 0xa3, 'ñ': 0xa4, 'Ñ': 0xa5, 'ü': 0x81, 'Ü': 0x9a,
+  'Á': 0xb5, 'É': 0x90, 'Í': 0xd6, 'Ó': 0xe0, 'Ú': 0xe9, '¿': 0xa8, '¡': 0xad, '°': 0xf8,
+};
+function bytesTexto(t: string): number[] {
+  const r: number[] = [];
+  for (const c of t.replace(/×/g, 'x').replace(/[−–—]/g, '-')) {
+    if (CP850[c] !== undefined) r.push(CP850[c]);
+    else {
+      const simple = c.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const code = simple.charCodeAt(0);
+      r.push(code >= 32 && code < 127 ? code : 0x3f);
+    }
+  }
+  return r;
+}
+
+/** Ticket en comandos ESC/POS: 32 columnas en papel de 58 mm, 48 en 80 mm. */
+export function escposTicket(d: DatosTicket, ancho: AnchoTicket): Uint8Array {
+  const cols = ancho === '58' ? 32 : 48;
+  const b: number[] = [];
+  const ESC = 0x1b, GS = 0x1d;
+  const cmd = (...x: number[]) => b.push(...x);
+  const linea = (t = '') => { b.push(...bytesTexto(t)); b.push(0x0a); };
+  const centro = (on: boolean) => cmd(ESC, 0x61, on ? 1 : 0);
+  const negrita = (on: boolean) => cmd(ESC, 0x45, on ? 1 : 0);
+  const partir = (t: string, w: number) => { const r: string[] = []; let x = t; while (x.length > w) { r.push(x.slice(0, w)); x = x.slice(w); } r.push(x); return r; };
+  const dosCol = (a: string, z: string) => {
+    const izq = partir(a, Math.max(8, cols - z.length - 1));
+    izq.forEach((t, i) => linea(i === izq.length - 1 ? t + ' '.repeat(Math.max(1, cols - t.length - z.length)) + z : t));
+  };
+  const guiones = () => linea('-'.repeat(cols));
+  const m = (n: number) => dinero(n, d.moneda);
+  const aqui = d.total - d.enLinea;
+
+  cmd(ESC, 0x40);            // reinicia
+  cmd(ESC, 0x74, 2);         // página de códigos 850
+  centro(true);
+  cmd(GS, 0x21, 0x11); negrita(true);
+  partir(d.negocio.toUpperCase(), Math.floor(cols / 2)).forEach((t) => linea(t));
+  cmd(GS, 0x21, 0x00); negrita(false);
+  if (d.direccion) partir(d.direccion, cols).forEach((t) => linea(t));
+  if (d.telefono) linea(`Tel. ${d.telefono}`);
+  centro(false);
+  guiones();
+  negrita(true); linea(`Folio #${d.folio}`); negrita(false);
+  linea(d.fecha.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }));
+  if (d.cliente) linea(`Cliente: ${d.cliente}`);
+  if (d.barbero) linea(`Atendió: ${d.barbero}`);
+  if (d.anulada) { centro(true); negrita(true); linea('*** VENTA ANULADA ***'); negrita(false); centro(false); }
+  guiones();
+  for (const p of d.partidas) dosCol(`${p.cantidad} x ${p.nombre}`, m(p.importe));
+  if (d.descuento > 0) dosCol('Descuento', `-${m(d.descuento)}`);
+  if (d.propina > 0) dosCol('Propina', m(d.propina));
+  guiones();
+  negrita(true); dosCol('TOTAL', m(d.total)); negrita(false);
+  if (d.enLinea > 0) { dosCol('Pagado en línea', `-${m(d.enLinea)}`); negrita(true); dosCol(`Pagado aquí (${d.metodo})`, m(aqui)); negrita(false); }
+  else dosCol('Pago', d.metodo);
+  if (d.metodo === 'efectivo' && d.recibido && d.recibido > aqui) { dosCol('Recibido', m(d.recibido)); dosCol('Cambio', m(d.recibido - aqui)); }
+  guiones();
+  centro(true); linea('¡Gracias por tu visita!'); centro(false);
+  linea(); linea(); linea();
+  cmd(GS, 0x56, 0x42, 0x00); // corte parcial
+  return new Uint8Array(b);
+}
+
+function base64(bytes: Uint8Array) {
+  let s = '';
+  bytes.forEach((x) => { s += String.fromCharCode(x); });
+  return btoa(s);
+}
+
+/** Manda bytes a la impresora de red desde la app de Android. Lanza el error si no se pudo. */
+export function imprimirEnRed(bytes: Uint8Array, r: ImpresoraRed) {
+  const n = nativo();
+  if (!n) throw new Error('La impresión por red solo funciona en la app BarberaGo para Android');
+  const error = n.imprimirRed(r.ip, r.puerto, base64(bytes));
+  if (error) throw new Error(error);
+}
+
+/** Ticket de prueba para revisar la conexión y el ancho del papel. */
+export function ticketPrueba(): DatosTicket {
+  return {
+    negocio: 'BarberaGo', direccion: 'Prueba de impresora', moneda: 'MXN', folio: 0, fecha: new Date(),
+    partidas: [{ cantidad: 1, nombre: 'Corte clásico', importe: 250 }, { cantidad: 2, nombre: 'Cera para peinar con acabado mate', importe: 360 }],
+    descuento: 0, propina: 30, total: 640, enLinea: 0, metodo: 'efectivo', recibido: 700,
+  };
+}
+
+/**
+ * Imprime el ticket:
+ *  - en la app de Android con impresora de red guardada → directo por IP (ESC/POS);
+ *  - en la app de Android sin impresora → diálogo de impresión de Android;
+ *  - en el navegador → ventana de impresión del navegador.
+ * Lanza el error si la impresora de red no respondió.
+ */
 export function imprimirTicket(d: DatosTicket, ancho: AnchoTicket) {
+  const n = nativo();
+  if (n) {
+    const red = impresoraGuardada();
+    if (red) return imprimirEnRed(escposTicket(d, ancho), red);
+    return n.imprimirHtml(htmlTicket(d, ancho), `Ticket ${d.folio}`);
+  }
+  imprimirNavegador(d, ancho);
+}
+
+/** Imprime el ticket en un marco oculto (el navegador abre su ventana de impresión). */
+function imprimirNavegador(d: DatosTicket, ancho: AnchoTicket) {
   const marco = document.createElement('iframe');
   marco.setAttribute('aria-hidden', 'true');
   marco.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';

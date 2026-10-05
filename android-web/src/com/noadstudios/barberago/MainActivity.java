@@ -42,8 +42,10 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        s.setUserAgentString(s.getUserAgentString() + " BarberaGoAndroid/1.0");
+        s.setUserAgentString(s.getUserAgentString() + " BarberaGoAndroid/1.1");
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
+        // Impresión de tickets (red o diálogo de Android). Solo se cargan páginas de BarberaGo en esta vista.
+        web.addJavascriptInterface(new Impresora(this), "BarberaGoNativo");
 
         web.setWebViewClient(new WebViewClient() {
             // API 24+ (no está en el android.jar 23 con el que se compila, pero Android la llama igual).

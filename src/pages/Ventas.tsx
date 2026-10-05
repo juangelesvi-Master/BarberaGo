@@ -5,12 +5,14 @@ import type { Venta } from '../lib/tipos';
 import { deIsoDia, dinero, hora, isoDia, sumarDias } from '../lib/formato';
 import { Aviso, Cabecera, Vacio } from '../components/ui';
 import { anchoGuardado, imprimirTicket } from '../lib/ticket';
+import ImpresoraTickets from '../components/ImpresoraTickets';
 
 export default function Ventas() {
   const { negocio, barberos, puede } = useNegocio();
   const [dia, setDia] = useState(isoDia(new Date()));
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [error, setError] = useState('');
+  const [impresora, setImpresora] = useState(false);
 
   const cargar = useCallback(async () => {
     const desde = deIsoDia(dia);
@@ -32,13 +34,16 @@ export default function Ventas() {
   }
 
   function reimprimir(v: Venta) {
-    imprimirTicket({
+    setError('');
+    try {
+      imprimirTicket({
       negocio: negocio.nombre, direccion: negocio.direccion, telefono: negocio.telefono, moneda: negocio.moneda,
       folio: v.folio, fecha: new Date(v.fecha), cliente: v.clientes?.nombre, barbero: barberos.find((b) => b.id === v.barbero_id)?.nombre,
       partidas: (v.venta_items || []).map((i) => ({ cantidad: i.cantidad, nombre: i.nombre, importe: Number(i.importe) })),
       descuento: Number(v.descuento), propina: Number(v.propina), total: Number(v.total), enLinea: Number(v.pagado_en_linea || 0),
       metodo: v.metodo_pago, anulada: v.estado === 'anulada',
-    }, anchoGuardado());
+      }, anchoGuardado());
+    } catch (e) { setError(mensajeError(e)); }
   }
 
   const pagadas = ventas.filter((v) => v.estado === 'pagada');
@@ -50,6 +55,7 @@ export default function Ventas() {
   return (
     <div className="pagina">
       <Cabecera titulo="Ventas del día">
+        <button className="btn" onClick={() => setImpresora(true)}>Impresora</button>
         <input type="date" value={dia} onChange={(e) => e.target.value && setDia(e.target.value)} aria-label="Día" />
       </Cabecera>
       <div className="kpis">
@@ -61,6 +67,7 @@ export default function Ventas() {
         <div className="kpi"><span>Propinas</span><strong>{dinero(pagadas.reduce((a, v) => a + Number(v.propina), 0), negocio.moneda)}</strong></div>
       </div>
       <Aviso>{error}</Aviso>
+      {impresora && <ImpresoraTickets onCerrar={() => setImpresora(false)} />}
       {ventas.length === 0 ? <Vacio>No hay ventas este día.</Vacio> : (
         <div className="tabla-scroll">
           <table className="tabla">
