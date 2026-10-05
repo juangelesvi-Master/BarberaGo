@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase, mensajeError } from '../lib/supabase';
 import { useSesion } from '../lib/sesion';
 import { Marca } from '../components/Iconos';
@@ -8,7 +8,7 @@ import { fechaCorta } from '../lib/formato';
 
 /** Alta de barbería (primera o adicional) y canje de códigos de activación. */
 export default function Bienvenida() {
-  const { session, suscripcion, negocios, recargar, elegirNegocio, salir } = useSesion();
+  const { session, suscripcion, negocios, recargar, elegirNegocio, salir, esMaestro } = useSesion();
   const navegar = useNavigate();
   const [nombre, setNombre] = useState('');
   const [codigo, setCodigo] = useState('');
@@ -71,6 +71,7 @@ export default function Bienvenida() {
               ¿Trabajas en una barbería? Pide al administrador que te agregue con tu correo <strong>{session?.user.email}</strong> y vuelve a entrar.
             </p>
             <button className="btn-texto" onClick={() => recargar()}>Ya me agregaron</button>
+            {esMaestro && <Link to="/maestro" className="btn ancho">Abrir panel maestro</Link>}
             <button className="btn-texto" onClick={salir}>Cerrar sesión</button>
           </>
         )}

@@ -12,6 +12,8 @@ interface Estado {
   negocio: Negocio | null;
   miembro: Miembro | null;
   suscripcion: Suscripcion | null;
+  /** Dueño de la plataforma: ve el panel maestro. */
+  esMaestro: boolean;
   barberos: Barbero[];
   servicios: Servicio[];
   puede: (p: Permiso) => boolean;
@@ -47,6 +49,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const [negocios, setNegocios] = useState<Negocio[]>([]);
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null);
+  const [esMaestro, setEsMaestro] = useState(false);
   const [actualId, setActualId] = useState<string | null>(leerGuardado());
   const [barberos, setBarberos] = useState<Barbero[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
@@ -61,18 +64,20 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   const uidCargado = useRef<string | undefined>(undefined);
 
   const recargar = useCallback(async () => {
-    if (!uid) { setNegocios([]); setMiembros([]); setSuscripcion(null); setCargando(false); return; }
+    if (!uid) { setNegocios([]); setMiembros([]); setSuscripcion(null); setEsMaestro(false); setCargando(false); return; }
     // Solo la primera carga de cada cuenta muestra "Cargando…"; las recargas no desmontan la pantalla
     // (así no se pierden los avisos de "Cambios guardados").
     if (uidCargado.current !== uid) setCargando(true);
-    const [m, n, s] = await Promise.all([
+    const [m, n, s, ma] = await Promise.all([
       supabase.from('miembros').select('*').eq('usuario_id', uid).eq('activo', true),
       supabase.from('negocios').select('*').order('created_at'),
       supabase.from('suscripciones').select('plan, negocios_max, vence, origen').eq('usuario_id', uid).maybeSingle(),
+      supabase.rpc('maestro_es'),
     ]);
     setMiembros((m.data as Miembro[]) || []);
     setNegocios((n.data as Negocio[]) || []);
     setSuscripcion((s.data as Suscripcion) || null);
+    setEsMaestro(ma.data === true);
     uidCargado.current = uid;
     setCargando(false);
   }, [uid]);
@@ -107,6 +112,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     negocio,
     miembro,
     suscripcion,
+    esMaestro,
     barberos,
     servicios,
     puede: (p) => !!miembro && (miembro.rol === 'admin' || miembro.permisos.includes(p)),

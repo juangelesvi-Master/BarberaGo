@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { SesionProvider, useSesion } from './lib/sesion';
 import Layout, { Mas } from './components/Layout';
 import { Cargando } from './components/ui';
@@ -19,11 +19,15 @@ import PagoReserva from './pages/PagoReserva';
 import Tienda from './pages/Tienda';
 import PagoPedido from './pages/PagoPedido';
 import Pedidos from './pages/Pedidos';
+import Maestro from './pages/Maestro';
 
 function Interno() {
-  const { cargando, session, negocio, miembro, puede } = useSesion();
+  const { cargando, session, negocio, miembro, puede, esMaestro } = useSesion();
+  const { pathname } = useLocation();
   if (cargando) return <Cargando />;
   if (!session) return <Entrar />;
+  // El panel maestro no depende de tener barbería propia.
+  if (esMaestro && pathname.startsWith('/maestro')) return <Maestro />;
   if (!negocio || !miembro) return <Bienvenida />;
   const inicio = puede('agenda') ? '/agenda' : puede('cobrar') ? '/cobrar' : '/mas';
   return (

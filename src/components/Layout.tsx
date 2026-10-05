@@ -18,7 +18,7 @@ const MENU: { a: string; nombre: string; icono: string; permiso: Permiso; movil?
 ];
 
 export default function Layout() {
-  const { negocio, negocios, elegirNegocio, puede, salir, suscripcion, session } = useNegocio();
+  const { negocio, negocios, elegirNegocio, puede, salir, suscripcion, session, esMaestro } = useNegocio();
   const menu = MENU.filter((m) => puede(m.permiso));
   const movil = menu.filter((m) => m.movil).slice(0, 4);
   const vencida = suscripcion && negocio.creado_por === session?.user.id && new Date(suscripcion.vence) < new Date();
@@ -43,6 +43,7 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        {esMaestro && <NavLink to="/maestro" className="enlace-maestro"><Icono nombre="maestro" /> Panel maestro</NavLink>}
         <button className="btn-texto salir" onClick={salir}>Cerrar sesión</button>
       </aside>
 
@@ -78,7 +79,7 @@ export default function Layout() {
 
 /** Menú completo para celular. */
 export function Mas() {
-  const { puede, salir, negocio } = useNegocio();
+  const { puede, salir, negocio, esMaestro } = useNegocio();
   return (
     <div className="pagina">
       <p className="kicker">Menú</p>
@@ -89,6 +90,7 @@ export function Mas() {
             <Icono nombre={m.icono} /> {m.nombre}
           </NavLink>
         ))}
+        {esMaestro && <NavLink to="/maestro" className="tarjeta fila-enlace"><Icono nombre="maestro" /> Panel maestro</NavLink>}
         <button className="tarjeta fila-enlace" onClick={salir}><Icono nombre="salir" /> Cerrar sesión</button>
       </div>
     </div>
