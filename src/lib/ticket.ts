@@ -12,22 +12,41 @@ export function guardarAncho(a: AnchoTicket) {
   try { localStorage.setItem(CLAVE, a); } catch { /* sin almacenamiento: no pasa nada */ }
 }
 
-/** Puente de la app BarberaGo para Android (android-web/…/Impresora.java). */
-type Nativo = { version(): string; imprimirRed(ip: string, puerto: number, base64: string): string; imprimirHtml(html: string, titulo: string): void };
+/** Puente de la app BarberaGo para Android (android-web/…/Impresora.java). Bluetooth llegó en la 1.2. */
+type Nativo = {
+  version(): string;
+  imprimirRed(ip: string, puerto: number, base64: string): string;
+  imprimirHtml(html: string, titulo: string): void;
+  listarBluetooth?(): string;
+  imprimirBluetooth?(mac: string, base64: string): string;
+};
 const nativo = () => (window as unknown as { BarberaGoNativo?: Nativo }).BarberaGoNativo;
 export const enAppAndroid = () => !!nativo();
+export const appConBluetooth = () => typeof nativo()?.listarBluetooth === 'function';
 
-/** Impresora térmica de red de este dispositivo (solo la usa la app de Android). */
-export type ImpresoraRed = { ip: string; puerto: number };
+/** Impresora térmica de este dispositivo (solo la usa la app de Android): por red (IP) o Bluetooth emparejada. */
+export type ImpresoraRed = { tipo: 'red'; ip: string; puerto: number };
+export type ImpresoraBluetooth = { tipo: 'bluetooth'; mac: string; nombre: string };
+export type Impresora = ImpresoraRed | ImpresoraBluetooth;
 const CLAVE_RED = 'barberago-impresora-red';
-export function impresoraGuardada(): ImpresoraRed | null {
+export function impresoraGuardada(): Impresora | null {
   try {
     const d = JSON.parse(localStorage.getItem(CLAVE_RED) || 'null');
-    return d?.ip ? { ip: String(d.ip), puerto: Number(d.puerto) || 9100 } : null;
+    if (d?.tipo === 'bluetooth' && d.mac) return { tipo: 'bluetooth', mac: String(d.mac), nombre: String(d.nombre || d.mac) };
+    return d?.ip ? { tipo: 'red', ip: String(d.ip), puerto: Number(d.puerto) || 9100 } : null;
   } catch { return null; }
 }
-export function guardarImpresora(r: ImpresoraRed | null) {
-  try { if (r?.ip) localStorage.setItem(CLAVE_RED, JSON.stringify(r)); else localStorage.removeItem(CLAVE_RED); } catch { /* nada */ }
+export function guardarImpresora(r: Impresora | null) {
+  try { if (r) localStorage.setItem(CLAVE_RED, JSON.stringify(r)); else localStorage.removeItem(CLAVE_RED); } catch { /* nada */ }
+}
+
+/** Dispositivos Bluetooth emparejados en Android. Lanza el error (permiso, Bluetooth apagado…). */
+export function listarBluetooth(): { nombre: string; mac: string }[] {
+  const n = nativo();
+  if (!n?.listarBluetooth) throw new Error('Actualiza la app BarberaGo para Android para usar impresoras Bluetooth');
+  const r = JSON.parse(n.listarBluetooth());
+  if (!Array.isArray(r)) throw new Error(r?.error || 'No se pudo leer la lista de Bluetooth');
+  return r;
 }
 
 /** Liga pública de reservas de la barbería (la misma que comparte en redes). */
@@ -201,11 +220,15 @@ function base64(bytes: Uint8Array) {
   return btoa(s);
 }
 
-/** Manda bytes a la impresora de red desde la app de Android. Lanza el error si no se pudo. */
-export function imprimirEnRed(bytes: Uint8Array, r: ImpresoraRed) {
+/** Manda bytes ESC/POS a la impresora (red o Bluetooth) desde la app de Android. Lanza el error si no se pudo. */
+export function imprimirEnImpresora(bytes: Uint8Array, r: Impresora) {
   const n = nativo();
-  if (!n) throw new Error('La impresión por red solo funciona en la app BarberaGo para Android');
-  const error = n.imprimirRed(r.ip, r.puerto, base64(bytes));
+  if (!n) throw new Error('La impresión directa solo funciona en la app BarberaGo para Android');
+  let error: string;
+  if (r.tipo === 'bluetooth') {
+    if (!n.imprimirBluetooth) throw new Error('Actualiza la app BarberaGo para Android para usar impresoras Bluetooth');
+    error = n.imprimirBluetooth(r.mac, base64(bytes));
+  } else error = n.imprimirRed(r.ip, r.puerto, base64(bytes));
   if (error) throw new Error(error);
 }
 
@@ -220,16 +243,16 @@ export function ticketPrueba(): DatosTicket {
 
 /**
  * Imprime el ticket:
- *  - en la app de Android con impresora de red guardada → directo por IP (ESC/POS);
+ *  - en la app de Android con impresora guardada → directo por IP o Bluetooth (ESC/POS);
  *  - en la app de Android sin impresora → diálogo de impresión de Android;
  *  - en el navegador → ventana de impresión del navegador.
- * Lanza el error si la impresora de red no respondió.
+ * Lanza el error si la impresora no respondió.
  */
 export function imprimirTicket(d: DatosTicket, ancho: AnchoTicket) {
   const n = nativo();
   if (n) {
-    const red = impresoraGuardada();
-    if (red) return imprimirEnRed(escposTicket(d, ancho), red);
+    const imp = impresoraGuardada();
+    if (imp) return imprimirEnImpresora(escposTicket(d, ancho), imp);
     return n.imprimirHtml(htmlTicket(d, ancho), `Ticket ${d.folio}`);
   }
   imprimirNavegador(d, ancho);

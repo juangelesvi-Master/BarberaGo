@@ -43,7 +43,7 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        s.setUserAgentString(s.getUserAgentString() + " BarberaGoAndroid/1.1");
+        s.setUserAgentString(s.getUserAgentString() + " BarberaGoAndroid/1.2");
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
         // Impresión de tickets (red o diálogo de Android). Solo se cargan páginas de BarberaGo en esta vista.
         web.addJavascriptInterface(new Impresora(this), "BarberaGoNativo");

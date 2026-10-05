@@ -8,8 +8,8 @@ type Modo = 'entrar' | 'registro' | 'recuperar' | 'codigo';
 
 /** Dentro de la app de Android no se ofrece descargarla. */
 const enApp = navigator.userAgent.includes('BarberaGoAndroid');
-// La app 1.0 no tiene impresión de tickets: se le ofrece la versión nueva.
-const appVieja = /BarberaGoAndroid\/1\.0\b/.test(navigator.userAgent);
+// Las apps 1.0 (sin impresión) y 1.1 (sin Bluetooth) reciben la versión nueva.
+const appVieja = /BarberaGoAndroid\/1\.[01]\b/.test(navigator.userAgent);
 // La app 1.0 no sabe descargar archivos; con el dominio en mayúsculas la abre en el navegador, que sí descarga.
 const APK_FUERA = 'https://BarberaGo.restorago.com/descargas/BarberaGo.apk';
 

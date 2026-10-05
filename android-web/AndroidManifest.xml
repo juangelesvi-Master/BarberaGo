@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.noadstudios.barberago"
-    android:versionCode="3"
-    android:versionName="1.1">
+    android:versionCode="4"
+    android:versionName="1.2">
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Impresoras Bluetooth: hasta Android 11 bastan estos; desde Android 12 se pide "Dispositivos cercanos". -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"

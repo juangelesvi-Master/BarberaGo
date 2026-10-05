@@ -216,6 +216,8 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 .segmentado button.activo { background: var(--superficie); box-shadow: var(--sombra); font-weight: 600; }
 .cuenta .segmentado { display: flex; }
 .cuenta .segmentado button { flex: 1; }
+.segmentado.vertical { display: flex; flex-direction: column; }
+.segmentado.vertical button { text-align: left; }
 
 /* Horario */
 .horario { display: flex; flex-direction: column; gap: .35rem; }
