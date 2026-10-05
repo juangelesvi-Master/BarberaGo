@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Valores por defecto: proyecto Supabase "barberaGo". La llave publicable es pública por diseño;
+// Valores por defecto: proyecto Supabase "barberagosuitestudios-barberaGoBD". La llave publicable es pública por diseño;
 // la seguridad la dan las políticas RLS de la base.
-const url = import.meta.env.VITE_SUPABASE_URL || 'https://lezysppzyzzwpqmavbyo.supabase.co';
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_KvLKLJ1eQqs1DYml3CKijw_PjMUqika';
+const url = import.meta.env.VITE_SUPABASE_URL || 'https://stcazhnnsisklzpdwltu.supabase.co';
+const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_GxCR32wwmIYgifjE-L7xzg_8plHLGfb';
 
 export const supabase = createClient(url, key, {
   auth: { persistSession: true, autoRefreshToken: true },

@@ -5,7 +5,7 @@ Programa para barberías: agenda por barbero, fila de clientes sin cita, reserva
 cobro con propina, comisiones, clientes, inventario y reportes. Una sola aplicación web que
 se instala en el celular (PWA) y se puede empaquetar para Android e iOS con Capacitor.
 
-Usa el proyecto de Supabase **barberaGo** (`lezysppzyzzwpqmavbyo`) y sigue los patrones de
+Usa el proyecto de Supabase **barberagosuitestudios-barberaGoBD** (`stcazhnnsisklzpdwltu`) y sigue los patrones de
 HiRestaurant: multi-negocio, miembros con rol y permisos, suscripciones y códigos de activación.
 
 ## Correr en local
