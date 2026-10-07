@@ -6,6 +6,7 @@ import Reservar from './pages/Reservar';
 import Tienda from './pages/Tienda';
 import Entrar from './pages/Entrar';
 import Cuenta, { MascotaCuenta } from './pages/cuenta/Cuenta';
+import PagoReserva from './pages/cuenta/PagoReserva';
 import Admin, { AjustesAdmin, Catalogo, ClienteDetalle, Clientes, Hoy, MascotaAdmin, Pedidos, Reservas } from './pages/admin/Admin';
 
 /** Al cambiar de página sube al inicio, o baja a la sección del #ancla. */
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/entrar" element={<Entrar />} />
           <Route path="/cuenta" element={<Cuenta />} />
           <Route path="/cuenta/mascota/:id" element={<MascotaCuenta />} />
+          <Route path="/cuenta/pago/:id" element={<PagoReserva />} />
           <Route path="/admin" element={<Admin />}>
             <Route index element={<Hoy />} />
             <Route path="reservas" element={<Reservas />} />

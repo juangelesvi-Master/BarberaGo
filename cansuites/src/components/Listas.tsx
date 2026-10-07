@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { EstadoPedido, EstadoReserva, Pedido, Reserva } from '../lib/tipos';
-import { ESTADOS_PEDIDO, ESTADOS_RESERVA, TIPOS_SERVICIO } from '../lib/tipos';
+import { ESTADOS_PEDIDO, ESTADOS_RESERVA, TIPOS_SERVICIO, esperandoPago } from '../lib/tipos';
 import { fechaCorta, fechaDia, precio } from '../lib/formato';
 
 const COLOR_RESERVA: Record<EstadoReserva, string> = {
@@ -15,6 +15,21 @@ export function ChipReserva({ estado }: { estado: EstadoReserva }) {
 }
 export function ChipPedido({ estado }: { estado: EstadoPedido }) {
   return <span className={`chip ${COLOR_PEDIDO[estado]}`}>{ESTADOS_PEDIDO[estado]}</span>;
+}
+
+/** Lo pagado en línea: pagado, esperando el pago, por devolver o devuelto. */
+export function ChipPago({ r }: { r: Reserva }) {
+  if (r.pago_estado === 'pagado') return <span className="chip chip-ok">💳 Pagado {precio(r.pagado)}</span>;
+  if (r.pago_estado === 'por_reembolsar') return <span className="chip chip-peligro">Por reembolsar {precio(r.pagado)}</span>;
+  if (r.pago_estado === 'reembolsado') return <span className="chip chip-tenue">Reembolsado {precio(r.pagado)}</span>;
+  if (esperandoPago(r)) return <span className="chip chip-alerta">Esperando pago</span>;
+  if (r.pago_estado === 'esperando' && r.estado !== 'cancelada') return <span className="chip chip-tenue">Pago no completado</span>;
+  return null;
+}
+
+/** Lo que falta por cobrar en CanSuites cuando se pagó un anticipo o cambió el total. */
+export function restaPorCobrar(r: Reserva): number {
+  return r.pago_estado === 'pagado' ? Math.max(0, r.total - r.pagado) : r.total;
 }
 
 /** "lun 6 oct · 11:00", "lun 6 → jue 9 oct (3 noches)". */
@@ -33,9 +48,10 @@ export function FilaReserva({ r, mostrarCliente, children }: { r: Reserva; mostr
         <div className="fila-reserva-titulo">
           <strong>{r.mascota_nombre}</strong> · {r.servicio_nombre}
           <ChipReserva estado={r.estado} />
+          <ChipPago r={r} />
         </div>
         <small className="tenue">
-          {cuandoReserva(r)} · {precio(r.total)} · #{r.folio}
+          {cuandoReserva(r)} · {precio(r.total)}{r.pago_estado === 'pagado' && r.estado !== 'cancelada' && restaPorCobrar(r) > 0 && <> (resta {precio(restaPorCobrar(r))})</>} · #{r.folio}
           {mostrarCliente && r.cliente_nombre && <> · {r.cliente_nombre}</>}
         </small>
         {r.notas && <small className="nota">“{r.notas}”</small>}

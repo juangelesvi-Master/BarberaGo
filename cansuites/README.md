@@ -39,13 +39,30 @@ En modo demostración hay dos cuentas: cliente `cliente@demo.com` / `demo123` y 
 | `/reservar` | Clientes | Hotel (noches con cupo por día), guardería (días) y estética (día y hora según la talla) |
 | `/tienda` | Clientes | Carrito; el pedido se aparta en línea y se paga al recoger |
 | `/entrar` | Clientes | Crear cuenta, entrar, recuperar contraseña |
-| `/cuenta` | Clientes | Mis mascotas, reservas (cancelar), pedidos y datos |
+| `/cuenta` | Clientes | Mis mascotas, reservas (pagar, cambiar fecha, cancelar), pedidos y datos |
+| `/cuenta/pago/:id` | Clientes | Regreso de Mercado Pago: confirma el pago o permite reintentar |
 | `/cuenta/mascota/:id` | Clientes | Ficha, cartilla de vacunación con próximas dosis e historial médico |
 | `/admin` | Recepción | Día: llegadas, salidas, hospedados, guardería y estética con check-in/check-out |
 | `/admin/reservas`, `/admin/pedidos` | Recepción | Listas con filtros y cambio de estado; «Nueva reserva» para clientes que llegan sin reserva o sin cuenta |
 | `/admin/clientes` | Recepción | Clientes y mascotas; agregar registros médicos firmados por CanSuites |
 | `/admin/catalogo` | Recepción | Servicios, precios, productos y existencia |
 | `/admin/ajustes` | Administrador | Cupo del hotel y guardería, baños a la vez, horario, check-in/out |
+
+## Pagos en línea (Mercado Pago)
+
+El administrador conecta la cuenta de CanSuites en **Ajustes > Pagos en línea** pegando su Access Token
+(producción `APP_USR-…` o de una cuenta de prueba). La llave se guarda en `privado.pago_cuenta` y solo la
+lee la Edge Function `pagos` (`supabase/functions/pagos`, desplegada con `verify_jwt = false`).
+Opciones: no cobrar, que el cliente elija (pagar ahora o al llegar) u obligar el pago; todo o un anticipo.
+
+Flujo: `reservar(..., p_pagar)` aparta el lugar 20 minutos → `pagos` (`cobrar`) crea la liga de Checkout
+Pro → Mercado Pago avisa al webhook (`/functions/v1/pagos?accion=webhook`) → `pago_registrar` confirma.
+La página de regreso también pregunta (`verificar`) por si el aviso se atrasa. Un apartado vencido deja de
+ocupar lugar; un pago que llega tarde o doble se devuelve solo.
+
+Cambiar fecha (`reagendar`): cliente o recepción mueven la reserva sin perder lo pagado; el total se
+recalcula con el mismo precio. Si el cliente cancela una reserva pagada, primero se le ofrece cambiar la
+fecha; si cancela, queda «por reembolsar» y recepción la devuelve por Mercado Pago o la marca como devuelta.
 
 ## Base de datos
 

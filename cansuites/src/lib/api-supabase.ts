@@ -26,7 +26,7 @@ type ReservaFila = Reserva & { mascotas?: { nombre: string } | null; servicios?:
 function reserva(r: ReservaFila): Reserva {
   const { mascotas, servicios, perfiles, ...resto } = r;
   return {
-    ...resto, precio_unit: Number(resto.precio_unit), total: Number(resto.total),
+    ...resto, precio_unit: Number(resto.precio_unit), total: Number(resto.total), pago_monto: Number(resto.pago_monto || 0), pagado: Number(resto.pagado || 0),
     mascota_nombre: mascotas?.nombre, servicio_nombre: servicios?.nombre, cliente_nombre: perfiles?.nombre, cliente_telefono: perfiles?.telefono,
   };
 }
@@ -39,6 +39,18 @@ function pedido(p: PedidoFila): Pedido {
     ...resto, total: Number(resto.total), items: (resto.items || []).map((i) => ({ ...i, precio_unit: Number(i.precio_unit) })),
     cliente_nombre: perfiles?.nombre, cliente_telefono: perfiles?.telefono,
   };
+}
+
+/** Llama la Edge Function `pagos` con la sesión actual; los errores vienen en español. */
+async function pagos<T>(cuerpo: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke('pagos', { body: cuerpo });
+  if (error) {
+    const r = (error as { context?: Response }).context;
+    const detalle = r && typeof r.json === 'function' ? await r.json().catch(() => null) : null;
+    throw new Error(detalle?.error || 'No se pudo conectar con el cobro. Intenta de nuevo.');
+  }
+  if (data?.error) throw new Error(data.error);
+  return data as T;
 }
 
 const numeros = <T extends { precio: number }>(xs: T[]) => xs.map((x) => ({ ...x, precio: Number(x.precio) }));
@@ -92,7 +104,7 @@ export const apiSupabase: Api = {
   },
 
   async ajustes() {
-    return ok(await supabase.from('ajustes').select('capacidad_hotel, capacidad_guarderia, estetica_simultaneos, intervalo_min, horario, check_in, check_out').eq('id', 1).single());
+    return ok(await supabase.from('ajustes').select('capacidad_hotel, capacidad_guarderia, estetica_simultaneos, intervalo_min, horario, check_in, check_out, pago_modo, pago_anticipo, pago_cuenta, pago_prueba').eq('id', 1).single());
   },
   async servicios(todos) {
     let q = supabase.from('servicios').select('*').order('orden').order('nombre');
@@ -140,8 +152,23 @@ export const apiSupabase: Api = {
   async reservar(n) {
     const r = ok(await supabase.rpc('reservar', {
       p_mascota: n.mascota_id, p_servicio: n.servicio_id, p_entrada: n.entrada, p_salida: n.salida, p_hora: n.hora, p_notas: n.notas,
+      p_pagar: !!n.pagar,
     })) as Reserva;
     return reserva(ok(await supabase.from('reservas').select(CAMPOS_RESERVA).eq('id', r.id).single()));
+  },
+  async reserva(id) {
+    const r = ok(await supabase.from('reservas').select(CAMPOS_RESERVA).eq('id', id).maybeSingle()) as ReservaFila | null;
+    return r ? reserva(r) : null;
+  },
+  async reagendar(id, { entrada, salida, hora }) {
+    ok(await supabase.rpc('reagendar', { p_id: id, p_entrada: entrada, p_salida: salida, p_hora: hora }));
+    return reserva(ok(await supabase.from('reservas').select(CAMPOS_RESERVA).eq('id', id).single()));
+  },
+  async iniciarPago(reservaId) {
+    return (await pagos<{ url: string }>({ accion: 'cobrar', reserva: reservaId })).url;
+  },
+  async verificarPago(reservaId) {
+    await pagos({ accion: 'verificar', reserva: reservaId });
   },
   async misReservas() {
     return (ok(await supabase.from('reservas').select(CAMPOS_RESERVA).eq('cliente_id', await uid()).order('entrada', { ascending: false })) as ReservaFila[]).map(reserva);
@@ -193,6 +220,20 @@ export const apiSupabase: Api = {
     ok(id ? await supabase.from('productos').update(datos).eq('id', id) : await supabase.from('productos').insert(datos));
   },
   async guardarAjustes(a) {
-    ok(await supabase.from('ajustes').update(a).eq('id', 1));
+    // pago_cuenta y pago_prueba solo los cambia el servidor al conectar Mercado Pago.
+    const { pago_cuenta: _c, pago_prueba: _p, ...cambios } = a;
+    ok(await supabase.from('ajustes').update(cambios).eq('id', 1));
+  },
+  async conectarPagos(accessToken) {
+    return pagos({ accion: 'conectar', access_token: accessToken });
+  },
+  async desconectarPagos() {
+    ok(await supabase.rpc('pago_desconectar'));
+  },
+  async reembolsar(reservaId) {
+    await pagos({ accion: 'reembolsar', reserva: reservaId });
+  },
+  async marcarReembolsado(reservaId) {
+    ok(await supabase.rpc('marcar_reembolsado', { p_reserva: reservaId }));
   },
 };

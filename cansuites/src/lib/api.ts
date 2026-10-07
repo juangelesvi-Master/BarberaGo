@@ -41,6 +41,13 @@ export interface Api {
   guardarRegistro(r: Partial<RegistroMedico> & { mascota_id: string; titulo: string }): Promise<RegistroMedico>;
   borrarRegistro(id: string): Promise<void>;
   reservar(r: NuevaReserva): Promise<Reserva>;
+  reserva(id: string): Promise<Reserva | null>;
+  /** Cambia fecha (y hora) sin perder lo pagado; recalcula el total. */
+  reagendar(id: string, c: { entrada: string; salida: string; hora: string | null }): Promise<Reserva>;
+  /** Liga de Mercado Pago para pagar una reserva apartada. */
+  iniciarPago(reservaId: string): Promise<string>;
+  /** Pregunta a Mercado Pago por el pago (por si el aviso se atrasa). */
+  verificarPago(reservaId: string): Promise<void>;
   misReservas(): Promise<Reserva[]>;
   cancelarReserva(id: string): Promise<void>;
   pedir(items: { producto_id: string; cantidad: number }[], notas: string | null): Promise<Pedido>;
@@ -59,6 +66,12 @@ export interface Api {
   guardarServicio(s: Partial<Servicio> & { nombre: string }): Promise<void>;
   guardarProducto(p: Partial<Producto> & { nombre: string }): Promise<void>;
   guardarAjustes(a: Ajustes): Promise<void>;
+  conectarPagos(accessToken: string): Promise<{ cuenta: string; prueba: boolean }>;
+  desconectarPagos(): Promise<void>;
+  /** Devuelve por Mercado Pago lo pagado de una reserva cancelada. */
+  reembolsar(reservaId: string): Promise<void>;
+  /** Marca como devuelto lo que recepción reembolsó por su cuenta. */
+  marcarReembolsado(reservaId: string): Promise<void>;
 }
 
 /** Horas de inicio de la estética para un día según el horario y el intervalo. */
@@ -98,4 +111,8 @@ export const AJUSTES_INICIALES: Ajustes = {
   },
   check_in: '10:00',
   check_out: '13:00',
+  pago_modo: 'no',
+  pago_anticipo: 100,
+  pago_cuenta: null,
+  pago_prueba: false,
 };

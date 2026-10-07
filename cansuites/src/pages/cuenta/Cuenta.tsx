@@ -3,12 +3,13 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { api, mensajeError } from '../../lib/datos';
 import { useCuenta } from '../../lib/cuenta';
 import type { Mascota, Pedido, Reserva } from '../../lib/tipos';
-import { TALLAS } from '../../lib/tipos';
-import { edad, hoyIso } from '../../lib/formato';
-import { Aviso, Campo, Cargando, Vacio } from '../../components/ui';
+import { TALLAS, esperandoPago } from '../../lib/tipos';
+import { edad, hoyIso, precio } from '../../lib/formato';
+import { Aviso, Campo, Cargando, Modal, Vacio } from '../../components/ui';
 import { Pagina } from '../../components/Sitio';
 import { FilaPedido, FilaReserva } from '../../components/Listas';
 import Expediente from '../../components/Expediente';
+import CambiarFecha from '../../components/CambiarFecha';
 import FormMascota from '../../components/FormMascota';
 
 type Vista = 'mascotas' | 'reservas' | 'pedidos' | 'datos';
@@ -89,16 +90,28 @@ function MisMascotas() {
 function MisReservas() {
   const [reservas, setReservas] = useState<Reserva[] | null>(null);
   const [error, setError] = useState('');
+  const [mover, setMover] = useState<Reserva | null>(null);
+  const [cancelarPagada, setCancelarPagada] = useState<Reserva | null>(null);
+  const [pagando, setPagando] = useState('');
   const cargar = useCallback(() => api.misReservas().then(setReservas).catch((e) => setError(mensajeError(e))), []);
   useEffect(() => { cargar(); }, [cargar]);
   if (!reservas) return <><Aviso>{error}</Aviso><Cargando /></>;
   const hoy = hoyIso();
-  const proximas = reservas.filter((r) => r.salida >= hoy && r.estado !== 'cancelada' && r.estado !== 'completada').reverse();
+  // Un apartado cuyo pago venció ya no es una reserva próxima.
+  const vencida = (r: Reserva) => r.pago_estado === 'esperando' && !esperandoPago(r);
+  const proximas = reservas.filter((r) => r.salida >= hoy && r.estado !== 'cancelada' && r.estado !== 'completada' && !vencida(r)).reverse();
   const pasadas = reservas.filter((r) => !proximas.includes(r));
-  async function cancelar(r: Reserva) {
-    if (!confirm(`¿Cancelar la reserva #${r.folio} de ${r.mascota_nombre}?`)) return;
-    setError('');
+  const cambiable = (r: Reserva) => ['pendiente', 'confirmada'].includes(r.estado) && r.entrada >= hoy && r.pago_estado !== 'esperando';
+
+  async function cancelar(r: Reserva, sinPreguntar = false) {
+    if (r.pago_estado === 'pagado' && !sinPreguntar) { setCancelarPagada(r); return; }
+    if (!sinPreguntar && !confirm(`¿Cancelar la reserva #${r.folio} de ${r.mascota_nombre}?`)) return;
+    setError(''); setCancelarPagada(null);
     try { await api.cancelarReserva(r.id); cargar(); } catch (e) { setError(mensajeError(e)); }
+  }
+  async function pagar(r: Reserva) {
+    setError(''); setPagando(r.id);
+    try { window.location.href = await api.iniciarPago(r.id); } catch (e) { setError(mensajeError(e)); setPagando(''); }
   }
   return (
     <>
@@ -109,7 +122,9 @@ function MisReservas() {
           <div className="lista-filas">
             {proximas.map((r) => (
               <FilaReserva key={r.id} r={r}>
-                {['pendiente', 'confirmada'].includes(r.estado) && r.entrada >= hoy && <button className="btn btn-chico btn-peligro" onClick={() => cancelar(r)}>Cancelar</button>}
+                {esperandoPago(r) && <button className="btn btn-chico btn-primario" disabled={pagando === r.id} onClick={() => pagar(r)}>{pagando === r.id ? 'Abriendo…' : `Pagar ${precio(r.pago_monto)}`}</button>}
+                {cambiable(r) && <button className="btn btn-chico" onClick={() => setMover(r)}>Cambiar fecha</button>}
+                {cambiable(r) && <button className="btn btn-chico btn-peligro" onClick={() => cancelar(r)}>Cancelar</button>}
               </FilaReserva>
             ))}
           </div>
@@ -120,6 +135,19 @@ function MisReservas() {
           <h2>Historial</h2>
           <div className="lista-filas">{pasadas.map((r) => <FilaReserva key={r.id} r={r} />)}</div>
         </section>
+      )}
+      {mover && <CambiarFecha r={mover} onCerrar={() => setMover(null)} onHecho={() => { setMover(null); cargar(); }} />}
+      {cancelarPagada && (
+        <Modal titulo="¿Mejor cambiamos la fecha?" onCerrar={() => setCancelarPagada(null)}>
+          <div className="formulario">
+            <p>Ya pagaste <strong>{precio(cancelarPagada.pagado)}</strong> por esta reserva de {cancelarPagada.mascota_nombre}. Si cambias la fecha, lo pagado se queda para la nueva fecha y no pierdes nada.</p>
+            <p className="tenue pequeno">Si la cancelas, CanSuites revisa tu caso y te contacta para el reembolso.</p>
+            <div className="acciones">
+              <button className="btn btn-peligro" onClick={() => cancelar(cancelarPagada, true)}>Cancelar de todos modos</button>
+              <button className="btn btn-primario" onClick={() => { setMover(cancelarPagada); setCancelarPagada(null); }}>Cambiar fecha</button>
+            </div>
+          </div>
+        </Modal>
       )}
     </>
   );

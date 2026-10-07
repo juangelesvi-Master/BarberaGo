@@ -33,6 +33,7 @@ export default function Reservar() {
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [hecha, setHecha] = useState<Reserva | null>(null);
+  const [pagarAhora, setPagarAhora] = useState(true);
 
   useEffect(() => { document.title = 'Reservar · CanSuites'; }, []);
   useEffect(() => {
@@ -92,13 +93,28 @@ export default function Reservar() {
     return diasOcupados(tipo, entrada, salida).filter((d) => (ocupacion[d] || 0) >= capacidad);
   }, [tipo, entrada, salida, unidades, ocupacion, capacidad]);
 
+  // Pago en línea: lo decide el administrador en Ajustes (recepción nunca cobra en línea desde aquí).
+  const cobroEnLinea = !!ajustes?.pago_cuenta && ajustes.pago_modo !== 'no' && !esPersonal;
+  const pagar = cobroEnLinea && (ajustes!.pago_modo === 'obligatorio' || pagarAhora);
+  const totalReserva = (servicio?.precio || 0) * (unidades || (tipo === 'estetica' && hora ? 1 : 0));
+  const montoEnLinea = Math.round(totalReserva * (ajustes?.pago_anticipo || 100)) / 100;
+
   const listo = !!mascota && !!servicio && !!entrada && (tipo === 'estetica' ? !!hora : unidades >= 1 && diasLlenos.length === 0);
 
   async function confirmar() {
     if (!mascota || !servicio) return;
     setError(''); setEnviando(true);
     try {
-      const r = await api.reservar({ mascota_id: mascota.id, servicio_id: servicio.id, entrada, salida: tipo === 'estetica' ? entrada : salida, hora, notas: notas.trim() || null });
+      const r = await api.reservar({ mascota_id: mascota.id, servicio_id: servicio.id, entrada, salida: tipo === 'estetica' ? entrada : salida, hora, notas: notas.trim() || null, pagar });
+      if (r.pago_estado === 'esperando') {
+        try {
+          window.location.href = await api.iniciarPago(r.id);
+          return;
+        } catch (e) {
+          // El lugar ya quedó apartado: se puede reintentar el pago desde Mi cuenta.
+          setError(mensajeError(e));
+        }
+      }
       setHecha(r);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
@@ -235,10 +251,27 @@ export default function Reservar() {
               </dd>
               {tipo !== 'estetica' && unidades > 0 && <><dt>{TIPOS_SERVICIO[tipo].unidades[0].toUpperCase() + TIPOS_SERVICIO[tipo].unidades.slice(1)}</dt><dd>{unidades} × {precio(servicio?.precio)}</dd></>}
             </dl>
-            <div className="resumen-total"><span>Total</span><strong>{precio((servicio?.precio || 0) * (unidades || (tipo === 'estetica' && hora ? 1 : 0)))}</strong></div>
-            <p className="tenue pequeno">Pagas en CanSuites al llegar. Te confirmamos por WhatsApp.{tipo === 'estetica' ? ' Precio sujeto a revisión conforme al estado del perrito.' : ''}</p>
+            <div className="resumen-total"><span>Total</span><strong>{precio(totalReserva)}</strong></div>
+            {cobroEnLinea && ajustes!.pago_modo === 'opcional' && (
+              <div className="opciones-servicio">
+                <button type="button" className={`opcion ${pagarAhora ? 'elegida' : ''}`} onClick={() => setPagarAhora(true)}>
+                  <span className="opcion-linea"><strong>💳 Pagar ahora</strong>{totalReserva > 0 && <span className="naranja">{precio(montoEnLinea)}</span>}</span>
+                  <small className="tenue">Con Mercado Pago. Tu reserva queda confirmada al momento{ajustes!.pago_anticipo < 100 ? ` (anticipo del ${ajustes!.pago_anticipo}%)` : ''}.</small>
+                </button>
+                <button type="button" className={`opcion ${!pagarAhora ? 'elegida' : ''}`} onClick={() => setPagarAhora(false)}>
+                  <strong>Pagar en CanSuites</strong>
+                  <small className="tenue">Al llegar. Te confirmamos por WhatsApp.</small>
+                </button>
+              </div>
+            )}
+            <p className="tenue pequeno">
+              {pagar
+                ? `Pagas ${ajustes!.pago_anticipo < 100 ? `un anticipo de ${precio(montoEnLinea)}` : precio(montoEnLinea)} con Mercado Pago${ajustes!.pago_anticipo < 100 ? '; el resto, en CanSuites' : ''}. Si luego no puedes venir, cambias la fecha sin perder lo pagado.`
+                : 'Pagas en CanSuites al llegar. Te confirmamos por WhatsApp.'}
+              {tipo === 'estetica' ? ' Precio sujeto a revisión conforme al estado del perrito.' : ''}
+            </p>
             <Aviso>{error}</Aviso>
-            <button className="btn btn-primario ancho grande" disabled={!listo || enviando} onClick={confirmar}>{enviando ? 'Reservando…' : 'Confirmar reserva'}</button>
+            <button className="btn btn-primario ancho grande" disabled={!listo || enviando} onClick={confirmar}>{enviando ? 'Reservando…' : pagar ? 'Reservar y pagar' : 'Confirmar reserva'}</button>
           </aside>
         </div>
       )}
@@ -327,10 +360,12 @@ function Confirmacion({ r, mascota, ajustes }: { r: Reserva; mascota: Mascota | 
         <p><strong>{r.servicio_nombre}</strong> para <strong>{mascota?.nombre || r.mascota_nombre}</strong><br />{cuando}</p>
         <p className="total-grande">{precio(r.total)}</p>
         {r.tipo === 'hotel' && ajustes && <p className="tenue pequeno">Entrada desde las {ajustes.check_in} · salida hasta las {ajustes.check_out}. Trae su cartilla de vacunación y su comida.</p>}
-        <p className="tenue">{r.estado === 'pendiente' ? 'Te confirmaremos por WhatsApp. Si quieres, escríbenos ahora para agilizarlo.' : 'Tu reserva ya está confirmada.'}</p>
+        <p className="tenue">{r.pago_estado === 'esperando'
+          ? 'Tu lugar está apartado unos minutos, pero el pago no se completó. Termínalo desde Mis reservas.'
+          : r.estado === 'pendiente' ? 'Te confirmaremos por WhatsApp. Si quieres, escríbenos ahora para agilizarlo.' : 'Tu reserva ya está confirmada.'}</p>
         <div className="acciones centro-acciones">
           <a className="btn btn-whatsapp" href={whatsapp(NEGOCIO.whatsapp, mensaje)!} target="_blank" rel="noreferrer">Enviar por WhatsApp</a>
-          <Link className="btn btn-primario" to="/cuenta">Ver mis reservas</Link>
+          <Link className="btn btn-primario" to="/cuenta?vista=reservas">Ver mis reservas</Link>
         </div>
       </div>
     </Pagina>

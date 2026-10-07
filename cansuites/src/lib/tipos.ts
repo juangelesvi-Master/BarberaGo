@@ -123,11 +123,24 @@ export interface Reserva {
   estado: EstadoReserva;
   notas: string | null;
   created_at: string;
+  /** Pago en línea: `esperando` = lugar apartado mientras el cliente paga (vence en `pago_expira`). */
+  pago_estado: PagoEstado;
+  /** Lo que se cobra en línea (todo o anticipo). */
+  pago_monto: number;
+  /** Lo que ya se pagó en línea. */
+  pagado: number;
+  pago_expira: string | null;
   mascota_nombre?: string;
   servicio_nombre?: string;
   cliente_nombre?: string;
   cliente_telefono?: string | null;
 }
+
+export type PagoEstado = 'sin_pago' | 'esperando' | 'pagado' | 'por_reembolsar' | 'reembolsado';
+
+/** ¿El apartado sigue esperando el pago a tiempo? */
+export const esperandoPago = (r: Pick<Reserva, 'pago_estado' | 'pago_expira' | 'estado'>) =>
+  r.pago_estado === 'esperando' && r.estado !== 'cancelada' && !!r.pago_expira && new Date(r.pago_expira).getTime() > Date.now();
 
 export interface NuevaReserva {
   mascota_id: string;
@@ -136,6 +149,8 @@ export interface NuevaReserva {
   salida: string;
   hora: string | null;
   notas: string | null;
+  /** Pagar en línea al reservar (si CanSuites cobra en línea). */
+  pagar?: boolean;
 }
 
 export interface Producto {
@@ -188,4 +203,13 @@ export interface Ajustes {
   horario: Horario;
   check_in: string;
   check_out: string;
+  /** Pagos en línea: no se cobra, el cliente elige, o es obligatorio. */
+  pago_modo: ModoPago;
+  /** Porcentaje que se cobra en línea (100 = todo). */
+  pago_anticipo: number;
+  /** Cuenta de Mercado Pago conectada (null = sin conectar). */
+  pago_cuenta: string | null;
+  pago_prueba: boolean;
 }
+
+export type ModoPago = 'no' | 'opcional' | 'obligatorio';

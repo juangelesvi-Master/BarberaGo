@@ -13,6 +13,8 @@ import { FilaPedido, FilaReserva } from '../../components/Listas';
 import Expediente from '../../components/Expediente';
 import FormMascota from '../../components/FormMascota';
 import NuevaReservaAdmin from './NuevaReserva';
+import CambiarFecha from '../../components/CambiarFecha';
+import PagosAjustes from './PagosAjustes';
 
 /** Panel de recepción: solo personal y administradores. */
 export default function Admin() {
@@ -39,7 +41,7 @@ export default function Admin() {
 function AccionesReserva({ r, onCambio }: { r: Reserva; onCambio: () => void }) {
   const [error, setError] = useState('');
   async function poner(estado: EstadoReserva) {
-    if (estado === 'cancelada' && !confirm(`¿Cancelar la reserva #${r.folio} de ${r.mascota_nombre}?`)) return;
+    if (estado === 'cancelada' && !confirm(`¿Cancelar la reserva #${r.folio} de ${r.mascota_nombre}?${r.pago_estado === 'pagado' ? ` Pagó ${precio(r.pagado)} en línea: quedará por reembolsar (o mejor cámbiale la fecha).` : ''}`)) return;
     try { await api.estadoReserva(r.id, estado); onCambio(); } catch (e) { setError(mensajeError(e)); }
   }
   const siguiente: Partial<Record<EstadoReserva, [EstadoReserva, string]>> = {
@@ -47,11 +49,24 @@ function AccionesReserva({ r, onCambio }: { r: Reserva; onCambio: () => void }) 
     confirmada: ['en_curso', r.tipo === 'hotel' ? 'Check-in' : 'Llegó'],
     en_curso: ['completada', r.tipo === 'hotel' ? 'Check-out' : 'Entregado'],
   };
+  const [mover, setMover] = useState(false);
+  async function reembolsar() {
+    if (!confirm(`¿Devolver ${precio(r.pagado)} a ${r.cliente_nombre} por Mercado Pago?`)) return;
+    try { await api.reembolsar(r.id); onCambio(); } catch (e) { setError(mensajeError(e)); }
+  }
+  async function yaDevuelto() {
+    if (!confirm(`¿Ya le devolviste ${precio(r.pagado)} a ${r.cliente_nombre} por tu cuenta (efectivo o transferencia)?`)) return;
+    try { await api.marcarReembolsado(r.id); onCambio(); } catch (e) { setError(mensajeError(e)); }
+  }
   const s = siguiente[r.estado];
   const msj = `Hola ${r.cliente_nombre}, te escribimos de CanSuites sobre la reserva #${r.folio} de ${r.mascota_nombre}.`;
   return (
     <>
       {s && <button className="btn btn-chico btn-primario" onClick={() => poner(s[0])}>{s[1]}</button>}
+      {['pendiente', 'confirmada'].includes(r.estado) && r.pago_estado !== 'esperando' && <button className="btn btn-chico" onClick={() => setMover(true)}>Cambiar fecha</button>}
+      {r.pago_estado === 'por_reembolsar' && <button className="btn btn-chico btn-primario" onClick={reembolsar}>Reembolsar {precio(r.pagado)}</button>}
+      {r.pago_estado === 'por_reembolsar' && <button className="btn btn-chico" onClick={yaDevuelto}>Ya lo devolví</button>}
+      {mover && <CambiarFecha r={r} onCerrar={() => setMover(false)} onHecho={() => { setMover(false); onCambio(); }} />}
       {r.cliente_telefono && <a className="btn btn-chico" href={whatsapp(r.cliente_telefono, msj)!} target="_blank" rel="noreferrer">WhatsApp</a>}
       <Link className="btn btn-chico" to={`/admin/mascota/${r.mascota_id}`}>Expediente</Link>
       {['pendiente', 'confirmada'].includes(r.estado) && <button className="btn btn-chico btn-peligro" onClick={() => poner('cancelada')}>Cancelar</button>}
@@ -124,11 +139,13 @@ export function Reservas() {
   const cargar = useCallback(() => api.reservas(desde, hasta).then(setReservas).catch(() => setReservas([])), [desde, hasta]);
   useEffect(() => { cargar(); }, [cargar]);
   const filtradas = (reservas || []).filter((r) => (!tipo || r.tipo === tipo) && (!estado || r.estado === estado));
-  const pendientes = (reservas || []).filter((r) => r.estado === 'pendiente').length;
+  const pendientes = (reservas || []).filter((r) => r.estado === 'pendiente' && r.pago_estado !== 'esperando').length;
+  const porReembolsar = (reservas || []).filter((r) => r.pago_estado === 'por_reembolsar').length;
   return (
     <>
       <Cabecera titulo="Reservas">
         {pendientes > 0 && <button className="chip chip-alerta" onClick={() => setEstado('pendiente')}>{pendientes} por confirmar</button>}
+        {porReembolsar > 0 && <button className="chip chip-peligro" onClick={() => setEstado('cancelada')}>{porReembolsar} por reembolsar</button>}
         <button className="btn btn-primario" onClick={() => setNueva(true)}>＋ Nueva reserva</button>
       </Cabecera>
       {nueva && <NuevaReservaAdmin onCerrar={() => setNueva(false)} onCreada={(r) => { setNueva(false); if (r.entrada < desde) setDesde(r.entrada); if (r.entrada > hasta) setHasta(r.salida); cargar(); }} />}
@@ -421,6 +438,7 @@ export function AjustesAdmin() {
     try { await api.guardarAjustes(a!); setAviso({ tipo: 'ok', texto: 'Cambios guardados' }); } catch (err) { setAviso({ tipo: 'error', texto: mensajeError(err) }); }
   }
   return (
+    <>
     <form className="formulario" onSubmit={guardar}>
       <Cabecera titulo="Ajustes" />
       <section className="tarjeta formulario">
@@ -449,8 +467,10 @@ export function AjustesAdmin() {
       </section>
       {aviso && <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso>}
       <div className="acciones"><button className="btn btn-primario grande">Guardar ajustes</button></div>
-      <p className="tenue pequeno">Para dar acceso al panel a alguien del equipo: que cree su cuenta en la página y luego, en Supabase, cambia su <code>rol</code> en la tabla <code>perfiles</code> a <code>personal</code> (o <code>admin</code>).</p>
     </form>
+    <PagosAjustes ajustes={a} onCambio={(c) => setA({ ...a, ...c })} />
+    <p className="tenue pequeno">Para dar acceso al panel a alguien del equipo: que cree su cuenta en la página y luego, en Supabase, cambia su <code>rol</code> en la tabla <code>perfiles</code> a <code>personal</code> (o <code>admin</code>).</p>
+    </>
   );
 }
 

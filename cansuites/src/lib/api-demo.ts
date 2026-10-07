@@ -1,5 +1,6 @@
 import type { Api, ClienteConMascotas } from './api';
 import { AJUSTES_INICIALES, diasOcupados, horasDelDia } from './api';
+import { esperandoPago } from './tipos';
 import type {
   Ajustes, Mascota, Pedido, Perfil, Producto, RegistroMedico, Reserva, Servicio,
 } from './tipos';
@@ -53,7 +54,7 @@ function semilla(): Db {
   const serv = (tipo: Servicio['tipo'], talla?: string) => servicios.find((s) => s.tipo === tipo && (!talla || s.talla === talla))!;
   const res = (m: Mascota, s: Servicio, entrada: string, salida: string, hora: string | null, estado: Reserva['estado'], folio: number): Reserva => {
     const unidades = s.tipo === 'hotel' ? diasEntre(entrada, salida) : s.tipo === 'guarderia' ? diasEntre(entrada, salida) + 1 : 1;
-    return { id: id(), folio, cliente_id: m.dueno_id, mascota_id: m.id, servicio_id: s.id, tipo: s.tipo, entrada, salida, hora, unidades, precio_unit: s.precio, total: s.precio * unidades, estado, notas: null, created_at: ahora() };
+    return { id: id(), folio, cliente_id: m.dueno_id, mascota_id: m.id, servicio_id: s.id, tipo: s.tipo, entrada, salida, hora, unidades, precio_unit: s.precio, total: s.precio * unidades, estado, notas: null, created_at: ahora(), ...SIN_PAGO };
   };
   return {
     version: 1,
@@ -87,10 +88,18 @@ function semilla(): Db {
   };
 }
 
+const SIN_PAGO = { pago_estado: 'sin_pago', pago_monto: 0, pagado: 0, pago_expira: null } as const;
+
 function leer(): Db {
   try {
     const t = localStorage.getItem(CLAVE);
-    if (t) return JSON.parse(t) as Db;
+    if (t) {
+      // Datos guardados antes de los pagos en línea: se completan con los valores nuevos.
+      const db = JSON.parse(t) as Db;
+      db.ajustes = { ...AJUSTES_INICIALES, ...db.ajustes };
+      db.reservas = db.reservas.map((r) => ({ ...SIN_PAGO, ...r }));
+      return db;
+    }
   } catch { /* sin almacenamiento */ }
   const db = semilla();
   guardar(db);
@@ -139,7 +148,44 @@ function conCliente(db: Db, p: Pedido): Pedido {
   const c = db.usuarios.find((u) => u.id === p.cliente_id);
   return { ...p, cliente_nombre: c?.nombre, cliente_telefono: c?.telefono };
 }
-const activa = (r: Reserva) => r.estado !== 'cancelada';
+/** Ocupa lugar: no cancelada y, si espera pago, que no haya vencido. */
+const activa = (r: Reserva) => r.estado !== 'cancelada' && (r.pago_estado !== 'esperando' || esperandoPago(r));
+
+/** Al cancelar: lo pagado queda por reembolsar y un apartado sin pagar se suelta. */
+function cancelar(r: Reserva) {
+  if (r.estado === 'cancelada') return;
+  r.estado = 'cancelada';
+  if (r.pago_estado === 'pagado' && r.pagado > 0) r.pago_estado = 'por_reembolsar';
+  else if (r.pago_estado === 'esperando') r.pago_estado = 'sin_pago';
+}
+
+/** Valida fechas, horario y cupo (sin contar la reserva `sin`) y regresa las unidades. */
+function validarLugar(db: Db, u: Perfil, tipo: Servicio['tipo'], entrada: string, salida: string, hora: string | null, sin?: string): number {
+  const hoy = hoyIso();
+  if (entrada < hoy) throw new Error('Elige una fecha a partir de hoy');
+  let unidades = 1;
+  if (tipo === 'hotel') {
+    unidades = diasEntre(entrada, salida);
+    if (unidades < 1) throw new Error('La salida debe ser después de la entrada');
+  } else if (tipo === 'guarderia') {
+    unidades = diasEntre(entrada, salida) + 1;
+    if (unidades < 1) throw new Error('El último día no puede ser antes del primero');
+  } else {
+    if (!hora || !horasDelDia(db.ajustes, entrada).includes(hora)) throw new Error('Elige un horario disponible');
+    const ahoraHm = new Date().toTimeString().slice(0, 5);
+    if (entrada === hoy && hora <= ahoraHm && !esPersonal(u)) throw new Error('Ese horario ya pasó');
+    const ocupadas = db.reservas.filter((x) => x.tipo === 'estetica' && activa(x) && x.id !== sin && x.entrada === entrada && x.hora === hora).length;
+    if (ocupadas >= db.ajustes.estetica_simultaneos) throw new Error('Ese horario se acaba de ocupar. Elige otro.');
+  }
+  if (unidades > 60) throw new Error('Para estancias de más de 60 días escríbenos por WhatsApp');
+  if (tipo !== 'estetica') {
+    const cap = tipo === 'hotel' ? db.ajustes.capacidad_hotel : db.ajustes.capacidad_guarderia;
+    const occ = ocupacionDias(db, tipo, entrada, salida, sin);
+    const lleno = diasOcupados(tipo, entrada, salida).find((dia) => (occ[dia] || 0) >= cap);
+    if (lleno) throw new Error(`No hay lugar el ${lleno}. Prueba otras fechas.`);
+  }
+  return unidades;
+}
 
 function ocupacionDias(db: Db, tipo: 'hotel' | 'guarderia', desde: string, hasta: string, sin?: string) {
   const r: Record<string, number> = {};
@@ -263,38 +309,52 @@ export const apiDemo: Api = {
     const m = puedeVerMascota(db, n.mascota_id);
     const s = db.servicios.find((x) => x.id === n.servicio_id && x.activo);
     if (!s) throw new Error('Ese servicio ya no está disponible');
-    const hoy = hoyIso();
-    if (n.entrada < hoy) throw new Error('Elige una fecha a partir de hoy');
-    let unidades = 1;
-    if (s.tipo === 'hotel') {
-      unidades = diasEntre(n.entrada, n.salida);
-      if (unidades < 1) throw new Error('La salida debe ser después de la entrada');
-    } else if (s.tipo === 'guarderia') {
-      unidades = diasEntre(n.entrada, n.salida) + 1;
-      if (unidades < 1) throw new Error('El último día no puede ser antes del primero');
-    } else {
-      n = { ...n, salida: n.entrada };
-      if (!n.hora || !horasDelDia(db.ajustes, n.entrada).includes(n.hora)) throw new Error('Elige un horario disponible');
-      const ahoraHm = new Date().toTimeString().slice(0, 5);
-      if (n.entrada === hoy && n.hora <= ahoraHm && !esPersonal(u)) throw new Error('Ese horario ya pasó');
-      const ocupadas = db.reservas.filter((x) => x.tipo === 'estetica' && activa(x) && x.entrada === n.entrada && x.hora === n.hora).length;
-      if (ocupadas >= db.ajustes.estetica_simultaneos) throw new Error('Ese horario se acaba de ocupar. Elige otro.');
-    }
-    if (unidades > 60) throw new Error('Para estancias de más de 60 días escríbenos por WhatsApp');
-    if (s.tipo !== 'estetica') {
-      const cap = s.tipo === 'hotel' ? db.ajustes.capacidad_hotel : db.ajustes.capacidad_guarderia;
-      const occ = ocupacionDias(db, s.tipo, n.entrada, n.salida);
-      const lleno = diasOcupados(s.tipo, n.entrada, n.salida).find((dia) => (occ[dia] || 0) >= cap);
-      if (lleno) throw new Error(`No hay lugar el ${lleno}. Prueba otras fechas.`);
-    }
+    if (s.tipo === 'estetica') n = { ...n, salida: n.entrada };
+    const unidades = validarLugar(db, u, s.tipo, n.entrada, n.salida, n.hora);
+    const a = db.ajustes;
+    const pagar = !esPersonal(u) && !!a.pago_cuenta && (a.pago_modo === 'obligatorio' || (a.pago_modo === 'opcional' && !!n.pagar)) && s.precio * unidades > 0;
     const r: Reserva = {
       id: id(), folio: Math.max(0, ...db.reservas.map((x) => x.folio)) + 1, cliente_id: m.dueno_id, mascota_id: m.id, servicio_id: s.id,
       tipo: s.tipo, entrada: n.entrada, salida: n.salida, hora: s.tipo === 'estetica' ? n.hora : null, unidades, precio_unit: s.precio,
       total: s.precio * unidades, estado: esPersonal(u) ? 'confirmada' : 'pendiente', notas: n.notas, created_at: ahora(),
+      ...SIN_PAGO,
+      ...(pagar ? {
+        pago_estado: 'esperando' as const, pago_monto: Math.round(s.precio * unidades * a.pago_anticipo) / 100,
+        pago_expira: new Date(Date.now() + 20 * 60000).toISOString(),
+      } : {}),
     };
     db.reservas.push(r); guardar(db);
     return conNombres(db, r);
   },
+  async reserva(rid) {
+    const db = leer(); const u = yo(db);
+    const r = db.reservas.find((x) => x.id === rid);
+    return pausa(r && (r.cliente_id === u.id || esPersonal(u)) ? conNombres(db, r) : null);
+  },
+  async reagendar(rid, { entrada, salida, hora }) {
+    const db = leer(); const u = yo(db);
+    const r = db.reservas.find((x) => x.id === rid);
+    if (!r || (r.cliente_id !== u.id && !esPersonal(u))) throw new Error('No encontramos esa reserva');
+    if (!['pendiente', 'confirmada'].includes(r.estado)) throw new Error('Esta reserva ya no se puede cambiar de fecha');
+    if (r.pago_estado === 'esperando') throw new Error('Termina el pago antes de cambiar la fecha');
+    if (!esPersonal(u) && r.entrada < hoyIso()) throw new Error('Esta reserva ya no se puede cambiar en línea. Escríbenos por WhatsApp.');
+    if (r.tipo === 'estetica') salida = entrada; else hora = null;
+    const unidades = validarLugar(db, u, r.tipo, entrada, salida, hora, r.id);
+    Object.assign(r, { entrada, salida, hora, unidades, total: r.precio_unit * unidades });
+    guardar(db);
+    return conNombres(db, r);
+  },
+  async iniciarPago(rid) {
+    // Demostración: el pago se aprueba al momento y se regresa a la página de resultado.
+    const db = leer(); const u = yo(db);
+    const r = db.reservas.find((x) => x.id === rid);
+    if (!r || (r.cliente_id !== u.id && !esPersonal(u))) throw new Error('No encontramos esa reserva');
+    if (!esperandoPago(r)) throw new Error('El tiempo para pagar esta reserva terminó. Haz la reserva de nuevo.');
+    Object.assign(r, { pago_estado: 'pagado', pagado: r.pago_monto, estado: r.estado === 'pendiente' ? 'confirmada' : r.estado });
+    guardar(db);
+    return `/cuenta/pago/${r.id}`;
+  },
+  async verificarPago() { /* en la demostración el pago ya quedó registrado */ },
   async misReservas() {
     const db = leer(); const u = yo(db);
     return pausa(db.reservas.filter((r) => r.cliente_id === u.id).map((r) => conNombres(db, r)).sort((a, b) => b.entrada.localeCompare(a.entrada)));
@@ -304,7 +364,7 @@ export const apiDemo: Api = {
     const r = db.reservas.find((x) => x.id === rid);
     if (!r || (r.cliente_id !== u.id && !esPersonal(u))) throw new Error('No encontramos esa reserva');
     if (!esPersonal(u) && (!['pendiente', 'confirmada'].includes(r.estado) || r.entrada < hoyIso())) throw new Error('Esta reserva ya no se puede cancelar en línea. Escríbenos por WhatsApp.');
-    r.estado = 'cancelada'; guardar(db);
+    cancelar(r); guardar(db);
   },
   async pedir(items, notas) {
     const db = leer(); const u = yo(db);
@@ -341,7 +401,7 @@ export const apiDemo: Api = {
   async estadoReserva(rid, estado) {
     const db = leer(); if (!esPersonal(yo(db))) throw new Error('Sin permiso');
     const r = db.reservas.find((x) => x.id === rid);
-    if (r) { r.estado = estado; guardar(db); }
+    if (r) { if (estado === 'cancelada') cancelar(r); else r.estado = estado; guardar(db); }
   },
   async clientes(busqueda) {
     const db = leer(); if (!esPersonal(yo(db))) throw new Error('Sin permiso');
@@ -395,6 +455,28 @@ export const apiDemo: Api = {
   },
   async guardarAjustes(a) {
     const db = leer(); if (yo(db).rol !== 'admin') throw new Error('Solo el administrador cambia los ajustes');
-    db.ajustes = a; guardar(db);
+    db.ajustes = { ...a, pago_cuenta: db.ajustes.pago_cuenta, pago_prueba: db.ajustes.pago_prueba }; guardar(db);
+  },
+  async conectarPagos(token) {
+    const db = leer(); if (yo(db).rol !== 'admin') throw new Error('Solo el administrador puede conectar los pagos');
+    if (!/^(APP_USR|TEST)-[\w-]{20,}$/.test(token.trim())) throw new Error('Pega el Access Token completo (empieza con APP_USR- o TEST-)');
+    db.ajustes = { ...db.ajustes, pago_cuenta: 'CUENTA-DEMO', pago_prueba: true, pago_modo: db.ajustes.pago_modo === 'no' ? 'opcional' : db.ajustes.pago_modo };
+    guardar(db);
+    return { cuenta: 'CUENTA-DEMO', prueba: true };
+  },
+  async desconectarPagos() {
+    const db = leer(); if (yo(db).rol !== 'admin') throw new Error('Solo el administrador cambia los pagos');
+    db.ajustes = { ...db.ajustes, pago_modo: 'no', pago_cuenta: null, pago_prueba: false }; guardar(db);
+  },
+  async reembolsar(rid) {
+    const db = leer(); if (!esPersonal(yo(db))) throw new Error('Sin permiso');
+    const r = db.reservas.find((x) => x.id === rid && x.pago_estado === 'por_reembolsar');
+    if (!r) throw new Error('Esta reserva no tiene un pago en línea por devolver');
+    r.pago_estado = 'reembolsado'; guardar(db);
+  },
+  async marcarReembolsado(rid) {
+    const db = leer(); if (!esPersonal(yo(db))) throw new Error('Sin permiso');
+    const r = db.reservas.find((x) => x.id === rid && x.pago_estado === 'por_reembolsar');
+    if (r) { r.pago_estado = 'reembolsado'; guardar(db); }
   },
 };
