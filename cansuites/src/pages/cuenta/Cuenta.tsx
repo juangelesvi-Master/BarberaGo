@@ -106,7 +106,7 @@ function MisMascotas() {
       <button className="tarjeta tarjeta-mascota tarjeta-nueva" onClick={() => navegar('/cuenta/mascota/nueva')}>
         <div className="avatar-mascota grande" aria-hidden>＋</div>
         <h3>Agregar mascota</h3>
-        <small className="tenue">Registra su ficha y su cartilla</small>
+        <small className="tenue">Registra su ficha: alergias y cuidados</small>
       </button>
     </div>
   );

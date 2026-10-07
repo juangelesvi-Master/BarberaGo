@@ -52,7 +52,8 @@ export default function Expediente({ mascotaId, volver }: { mascotaId: string; v
   }
   const talla = TALLAS.find((t) => t.id === mascota.talla);
   const linea = (r: RegistroMedico) => !filtro || r.tipo === filtro;
-  const puedeEditar = (r: RegistroMedico) => esPersonal || r.autor === 'dueno';
+  // El historial médico solo lo llena CanSuites (en la cita); el dueño lo consulta.
+  const puedeEditar = (_r: RegistroMedico) => esPersonal;
 
   return (
     <div className="expediente">
@@ -123,10 +124,10 @@ export default function Expediente({ mascotaId, volver }: { mascotaId: string; v
               <option value="">Todo</option>
               {Object.entries(TIPOS_REGISTRO).map(([k, v]) => <option key={k} value={k}>{v.nombre}</option>)}
             </select>
-            <button className="btn btn-primario" onClick={() => setRegistro({ tipo: 'vacuna', fecha: hoyIso() })}>＋ Agregar registro</button>
+            {esPersonal && <button className="btn btn-primario" onClick={() => setRegistro({ tipo: 'vacuna', fecha: hoyIso() })}>＋ Agregar registro</button>}
           </div>
         </div>
-        {registros === null ? <Cargando /> : registros.filter(linea).length === 0 ? <Vacio>Sin registros todavía.</Vacio> : (
+        {registros === null ? <Cargando /> : registros.filter(linea).length === 0 ? <Vacio>{esPersonal ? 'Sin registros todavía.' : 'Sin registros todavía. El equipo de CanSuites anota aquí sus vacunas y consultas cuando viene a cita; trae su cartilla en tu próxima visita.'}</Vacio> : (
           <ol className="linea-tiempo">
             {registros.filter(linea).map((r) => (
               <li key={r.id}>
@@ -163,7 +164,6 @@ export default function Expediente({ mascotaId, volver }: { mascotaId: string; v
 function EditarRegistro({ mascota, registro, onCerrar, onGuardado }: {
   mascota: Mascota; registro: Partial<RegistroMedico>; onCerrar: () => void; onGuardado: () => void;
 }) {
-  const { esPersonal } = useCuenta();
   const [r, setR] = useState(registro);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -204,7 +204,7 @@ function EditarRegistro({ mascota, registro, onCerrar, onGuardado }: {
         {(r.tipo === 'vacuna' || r.tipo === 'desparasitacion' || r.tipo === 'tratamiento') && (
           <Campo etiqueta="Próxima dosis o revisión (opcional)"><input type="date" value={r.proxima || ''} onChange={(e) => cambia({ proxima: e.target.value })} /></Campo>
         )}
-        {!r.id && <p className="tenue pequeno">{esPersonal ? 'Quedará firmado por CanSuites.' : 'Quedará marcado como registrado por ti. Si tienes la cartilla, tráela en tu próxima visita para validarla.'}</p>}
+        {!r.id && <p className="tenue pequeno">Quedará firmado por CanSuites.</p>}
         <Aviso>{error}</Aviso>
         <div className="acciones">
           {r.id && <button type="button" className="btn btn-peligro" onClick={borrar}>Borrar</button>}

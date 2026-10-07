@@ -298,6 +298,7 @@ export const apiDemo: Api = {
   },
   async guardarRegistro(r) {
     const db = leer(); const u = yo(db); puedeVerMascota(db, r.mascota_id);
+    if (!esPersonal(u)) throw new Error('El historial médico lo llena CanSuites en la cita');
     if (r.id) {
       const actual = db.registros.find((x) => x.id === r.id);
       if (!actual) throw new Error('No encontramos ese registro');
@@ -316,7 +317,7 @@ export const apiDemo: Api = {
     const r = db.registros.find((x) => x.id === rid);
     if (!r) return;
     puedeVerMascota(db, r.mascota_id);
-    if (r.autor === 'cansuites' && !esPersonal(u)) throw new Error('Solo CanSuites puede borrar este registro');
+    if (!esPersonal(u)) throw new Error('El historial médico lo llena CanSuites en la cita');
     db.registros = db.registros.filter((x) => x.id !== rid); guardar(db);
   },
 
