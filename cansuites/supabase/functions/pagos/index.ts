@@ -14,7 +14,7 @@ const SECRETA = (() => {
   try { return JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}').default as string | undefined; } catch { return undefined; }
 })() || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const APP_URL = Deno.env.get('APP_URL') || 'https://cansuites.restorago.com';
-const ORIGENES = (Deno.env.get('ORIGENES') || `${APP_URL},http://localhost:5173,http://localhost:4173`).split(',');
+const ORIGENES = (Deno.env.get('ORIGENES') || `${APP_URL},https://cansuites.com,https://www.cansuites.com,http://localhost:5173,http://localhost:4173`).split(',');
 const MP = 'https://api.mercadopago.com';
 
 const CORS = {
