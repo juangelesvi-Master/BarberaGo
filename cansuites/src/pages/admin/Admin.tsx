@@ -12,6 +12,7 @@ import { Pagina } from '../../components/Sitio';
 import { FilaPedido, FilaReserva } from '../../components/Listas';
 import Expediente from '../../components/Expediente';
 import FormMascota from '../../components/FormMascota';
+import NuevaReservaAdmin from './NuevaReserva';
 
 /** Panel de recepción: solo personal y administradores. */
 export default function Admin() {
@@ -63,6 +64,7 @@ export function Hoy() {
   const [dia, setDia] = useState(hoyIso());
   const [reservas, setReservas] = useState<Reserva[] | null>(null);
   const [ajustes, setAjustes] = useState<Ajustes | null>(null);
+  const [nueva, setNueva] = useState(false);
   const cargar = useCallback(() => api.reservas(dia, dia).then(setReservas).catch(() => setReservas([])), [dia]);
   useEffect(() => { setReservas(null); cargar(); }, [cargar]);
   useEffect(() => { api.ajustes().then(setAjustes).catch(() => {}); }, []);
@@ -85,8 +87,10 @@ export function Hoy() {
           <input type="date" value={dia} onChange={(e) => e.target.value && setDia(e.target.value)} />
           <button className="btn" onClick={() => setDia(sumarDiasIso(dia, 1))} aria-label="Día siguiente">→</button>
           {dia !== hoyIso() && <button className="btn" onClick={() => setDia(hoyIso())}>Hoy</button>}
+          <button className="btn btn-primario" onClick={() => setNueva(true)}>＋ Nueva reserva</button>
         </div>
       </div>
+      {nueva && <NuevaReservaAdmin fecha={dia} onCerrar={() => setNueva(false)} onCreada={() => { setNueva(false); cargar(); }} />}
       <div className="kpis">
         <div className="kpi"><span>Huéspedes esta noche</span><strong>{huespedes.length}{ajustes ? ` / ${ajustes.capacidad_hotel}` : ''}</strong></div>
         <div className="kpi"><span>Llegadas · salidas</span><strong>{llegadas.length} · {salidas.length}</strong></div>
@@ -116,13 +120,18 @@ export function Reservas() {
   const [tipo, setTipo] = useState<TipoServicio | ''>('');
   const [estado, setEstado] = useState<EstadoReserva | ''>('');
   const [reservas, setReservas] = useState<Reserva[] | null>(null);
+  const [nueva, setNueva] = useState(false);
   const cargar = useCallback(() => api.reservas(desde, hasta).then(setReservas).catch(() => setReservas([])), [desde, hasta]);
   useEffect(() => { cargar(); }, [cargar]);
   const filtradas = (reservas || []).filter((r) => (!tipo || r.tipo === tipo) && (!estado || r.estado === estado));
   const pendientes = (reservas || []).filter((r) => r.estado === 'pendiente').length;
   return (
     <>
-      <Cabecera titulo="Reservas">{pendientes > 0 && <button className="chip chip-alerta" onClick={() => setEstado('pendiente')}>{pendientes} por confirmar</button>}</Cabecera>
+      <Cabecera titulo="Reservas">
+        {pendientes > 0 && <button className="chip chip-alerta" onClick={() => setEstado('pendiente')}>{pendientes} por confirmar</button>}
+        <button className="btn btn-primario" onClick={() => setNueva(true)}>＋ Nueva reserva</button>
+      </Cabecera>
+      {nueva && <NuevaReservaAdmin onCerrar={() => setNueva(false)} onCreada={(r) => { setNueva(false); if (r.entrada < desde) setDesde(r.entrada); if (r.entrada > hasta) setHasta(r.salida); cargar(); }} />}
       <div className="filtros">
         <Campo etiqueta="Desde"><input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></Campo>
         <Campo etiqueta="Hasta"><input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></Campo>
@@ -159,7 +168,7 @@ export function Clientes() {
     <>
       <Cabecera titulo="Clientes y mascotas" />
       <input className="buscar" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por cliente, teléfono, correo o mascota" />
-      {clientes === null ? <Cargando /> : clientes.length === 0 ? <Vacio>Sin resultados. Los clientes se registran solos desde la página al crear su cuenta.</Vacio> : (
+      {clientes === null ? <Cargando /> : clientes.length === 0 ? <Vacio>Sin resultados. Los clientes se registran desde la página, o los das de alta tú en «Nueva reserva» si llegan sin cuenta.</Vacio> : (
         <div className="tabla-scroll">
           <table className="tabla">
             <thead><tr><th>Cliente</th><th>Contacto</th><th>Mascotas</th></tr></thead>
@@ -167,7 +176,7 @@ export function Clientes() {
               {clientes.map((c) => (
                 <tr key={c.id}>
                   <td><Link to={`/admin/clientes/${c.id}`}><strong>{c.nombre}</strong></Link></td>
-                  <td className="tenue">{[c.telefono, c.email].filter(Boolean).join(' · ')}</td>
+                  <td className="tenue">{[c.telefono, c.email || 'sin correo'].filter(Boolean).join(' · ')}</td>
                   <td>{c.mascotas.length === 0 ? <span className="tenue">—</span> : c.mascotas.map((m) => <Link key={m.id} className="chip" to={`/admin/mascota/${m.id}`}>{m.nombre}</Link>)}</td>
                 </tr>
               ))}

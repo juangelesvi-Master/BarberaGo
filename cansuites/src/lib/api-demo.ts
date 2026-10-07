@@ -165,7 +165,7 @@ export const apiDemo: Api = {
   async entrar(email, clave) {
     const db = leer();
     const u = db.usuarios.find((x) => x.email?.toLowerCase() === email.trim().toLowerCase());
-    if (!u || u.clave !== clave) throw new Error('Correo o contraseña incorrectos');
+    if (!u || !u.clave || u.clave !== clave) throw new Error('Correo o contraseña incorrectos');
     db.sesion = u.id; guardar(db); avisar();
   },
   async registrar({ nombre, telefono, email, clave }) {
@@ -276,7 +276,7 @@ export const apiDemo: Api = {
       n = { ...n, salida: n.entrada };
       if (!n.hora || !horasDelDia(db.ajustes, n.entrada).includes(n.hora)) throw new Error('Elige un horario disponible');
       const ahoraHm = new Date().toTimeString().slice(0, 5);
-      if (n.entrada === hoy && n.hora <= ahoraHm) throw new Error('Ese horario ya pasó');
+      if (n.entrada === hoy && n.hora <= ahoraHm && !esPersonal(u)) throw new Error('Ese horario ya pasó');
       const ocupadas = db.reservas.filter((x) => x.tipo === 'estetica' && activa(x) && x.entrada === n.entrada && x.hora === n.hora).length;
       if (ocupadas >= db.ajustes.estetica_simultaneos) throw new Error('Ese horario se acaba de ocupar. Elige otro.');
     }
@@ -349,6 +349,16 @@ export const apiDemo: Api = {
     const r: ClienteConMascotas[] = db.usuarios.filter((u) => u.rol === 'cliente').map((u) => ({ ...sinClave(u), mascotas: db.mascotas.filter((m) => m.dueno_id === u.id) }))
       .filter((c) => !q || [c.nombre, c.email, c.telefono, ...c.mascotas.map((m) => m.nombre)].some((t) => t?.toLowerCase().includes(q)));
     return pausa(r.sort((a, b) => a.nombre.localeCompare(b.nombre)));
+  },
+  async altaClienteMostrador({ nombre, telefono, email }) {
+    const db = leer(); if (!esPersonal(yo(db))) throw new Error('Sin permiso');
+    if (!nombre.trim()) throw new Error('Escribe el nombre del cliente');
+    const correo = email?.trim().toLowerCase() || null;
+    const existe = correo && db.usuarios.find((x) => x.email?.toLowerCase() === correo);
+    if (existe) return sinClave(existe);
+    const u: Usuario = { id: id(), nombre: nombre.trim(), telefono: telefono?.trim() || null, email: correo, rol: 'cliente', created_at: ahora(), clave: '' };
+    db.usuarios.push(u); guardar(db);
+    return sinClave(u);
   },
   async cliente(cid) {
     const db = leer(); const u = yo(db);

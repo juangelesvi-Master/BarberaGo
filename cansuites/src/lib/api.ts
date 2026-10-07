@@ -51,6 +51,8 @@ export interface Api {
   reservasDeMascota(mascotaId: string): Promise<Reserva[]>;
   estadoReserva(id: string, estado: EstadoReserva): Promise<void>;
   clientes(busqueda: string): Promise<ClienteConMascotas[]>;
+  /** Cliente que llega al mostrador sin cuenta. Si el correo ya tiene cuenta, regresa esa. */
+  altaClienteMostrador(datos: { nombre: string; telefono: string | null; email: string | null }): Promise<Perfil>;
   cliente(id: string): Promise<Perfil | null>;
   pedidos(): Promise<Pedido[]>;
   estadoPedido(id: string, estado: EstadoPedido): Promise<void>;

@@ -172,6 +172,9 @@ export const apiSupabase: Api = {
     const q = busqueda.trim().toLowerCase();
     return (filas || []).filter((c) => !q || [c.nombre, c.email, c.telefono, ...c.mascotas.map((m) => m.nombre)].some((t) => t?.toLowerCase().includes(q)));
   },
+  async altaClienteMostrador({ nombre, telefono, email }) {
+    return ok(await supabase.rpc('alta_cliente_mostrador', { p_nombre: nombre, p_telefono: telefono, p_email: email })) as Perfil;
+  },
   async cliente(id) {
     return ok(await supabase.from('perfiles').select('*').eq('id', id).maybeSingle());
   },
