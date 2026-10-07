@@ -1,6 +1,8 @@
 # Hostinger/Apache: todas las rutas de la app sirven index.html
 RewriteEngine On
 RewriteBase /
+# El sitio se publica con git: no exponer la carpeta .git
+RewriteRule (^|/)\.git - [F,L]
 RewriteRule ^index\.html$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
