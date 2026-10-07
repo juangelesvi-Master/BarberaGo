@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AVISO_PRODUCTOS } from '../components/ProductosTienda';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { supabase, mensajeError, llamarPagos } from '../lib/supabase';
 import type { EstadoPago } from '../lib/tipos';
@@ -95,8 +96,8 @@ export default function PagoReserva() {
             <p>Pagaste <strong>{m(r.pago_monto)}</strong>{resto > 0.009 && <> · en la barbería pagas {m(resto)}</>}</p>
             {r.negocio.direccion && <p className="tenue">{r.negocio.direccion}</p>}
             <p className="tenue pequeno">
-              Si necesitas cambiar o cancelar, comunícate con la barbería
-              {r.negocio.telefono && <> al <a href={`tel:${r.negocio.telefono}`}>{r.negocio.telefono}</a></>}.
+              ¿Necesitas cambiar el horario? Tu pago se conserva: <Link to={`/r/${slug}/cancelar/${cita}`}>reagendar o cancelar mi cita</Link>.
+              {productos.length > 0 && <> {AVISO_PRODUCTOS}</>}
             </p>
           </>
         ) : r.pago_estado === 'pendiente' ? (

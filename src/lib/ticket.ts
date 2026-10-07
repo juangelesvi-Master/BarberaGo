@@ -62,12 +62,14 @@ function matrizQr(texto: string) {
 export type DatosTicket = {
   negocio: string; direccion?: string | null; telefono?: string | null; moneda: string;
   folio: number; fecha: Date; cliente?: string; barbero?: string;
-  partidas: { cantidad: number; nombre: string; importe: number }[];
+  partidas: { cantidad: number; nombre: string; importe: number; producto?: boolean }[];
   descuento: number; propina: number; total: number; enLinea: number;
   metodo: string; recibido?: number; anulada?: boolean;
   /** Liga de la página de reservas: se imprime como código QR al final. */
   qr?: string;
 };
+
+const SIN_DEVOLUCIONES = 'Productos sin cambios ni devoluciones';
 
 const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
@@ -101,6 +103,7 @@ tr.total td { font-weight: bold; font-size: 1.1em; border-top: 1px dashed #000; 
 .qr { width: ${ancho === '58' ? 30 : 36}mm; margin: 3mm auto 1mm; }
 .qr svg { display: block; width: 100%; height: auto; }
 .url { font-size: .85em; word-break: break-all; }
+.aviso { font-size: .85em; margin-top: 1mm; }
 .anulada { text-align: center; font-weight: bold; border: 2px solid #000; margin: 2mm 0; padding: 1mm; }
 </style></head><body><div class="t">
 <h1>${esc(d.negocio)}</h1>
@@ -112,6 +115,7 @@ ${d.cliente ? `<br>Cliente: ${esc(d.cliente)}` : ''}${d.barbero ? `<br>Atendió:
 ${d.anulada ? '<div class="anulada">VENTA ANULADA</div>' : ''}
 <hr><table>${filas}</table><hr>
 <p class="c">¡Gracias por tu visita!</p>
+${d.partidas.some((p) => p.producto) ? `<p class="c aviso">${SIN_DEVOLUCIONES}</p>` : ''}
 ${d.qr ? `<div class="qr">${matrizQr(d.qr).createSvgTag({ cellSize: 4, margin: 0, scalable: true })}</div>
 <p class="c"><b>Reserva tu próxima cita</b><br><span class="url">${esc(d.qr.replace(/^https:\/\//, ''))}</span></p>` : ''}
 </div></body></html>`;
@@ -181,6 +185,7 @@ export function escposTicket(d: DatosTicket, ancho: AnchoTicket): Uint8Array {
   if (d.metodo === 'efectivo' && d.recibido && d.recibido > aqui) { dosCol('Recibido', m(d.recibido)); dosCol('Cambio', m(d.recibido - aqui)); }
   guiones();
   centro(true); linea('¡Gracias por tu visita!');
+  if (d.partidas.some((p) => p.producto)) partir(SIN_DEVOLUCIONES, cols).forEach((t) => linea(t));
   if (d.qr) {
     linea();
     imagenQr(b, d.qr, ancho);

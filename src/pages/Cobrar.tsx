@@ -120,7 +120,7 @@ export default function Cobrar() {
       imprimirTicket({
       negocio: negocio.nombre, direccion: negocio.direccion, telefono: negocio.telefono, moneda: negocio.moneda, qr: negocio.reserva_online ? ligaReservas(negocio.slug) : undefined,
       folio: t.folio, fecha: t.fecha, cliente: t.cliente, barbero: barberos.find((b) => b.id === t.barberoId)?.nombre,
-      partidas: t.partidas.map((p) => ({ cantidad: p.cantidad, nombre: p.nombre, importe: p.precio * p.cantidad })),
+      partidas: t.partidas.map((p) => ({ cantidad: p.cantidad, nombre: p.nombre, importe: p.precio * p.cantidad, producto: p.tipo === 'producto' })),
       descuento: t.descuento, propina: t.propina, total: t.total, enLinea: t.enLinea, metodo: t.metodo, recibido: t.recibido,
       }, anchoGuardado());
     } catch (e) { setErrorImpresion(mensajeError(e)); }

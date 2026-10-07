@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AVISO_PRODUCTOS } from '../components/ProductosTienda';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { supabase, mensajeError, llamarPagos } from '../lib/supabase';
 import { dinero } from '../lib/formato';
@@ -88,7 +89,7 @@ export default function PagoPedido() {
               <div className="recoger">
                 <p><strong>Recógelo en {p.negocio.nombre}</strong></p>
                 {p.negocio.direccion && <p className="pequeno">{p.negocio.direccion}</p>}
-                <p className="tenue pequeno">Muestra tu número de pedido en la barbería. Guarda esta página para tenerlo a la mano.</p>
+                <p className="tenue pequeno">Muestra tu número de pedido en la barbería. Guarda esta página para tenerlo a la mano. {AVISO_PRODUCTOS}</p>
               </div>
             )}
             {p.negocio.telefono && <p className="tenue pequeno">¿Dudas? Llama al <a href={`tel:${p.negocio.telefono}`}>{p.negocio.telefono}</a></p>}

@@ -39,7 +39,7 @@ export default function Ventas() {
       imprimirTicket({
       negocio: negocio.nombre, direccion: negocio.direccion, telefono: negocio.telefono, moneda: negocio.moneda, qr: negocio.reserva_online ? ligaReservas(negocio.slug) : undefined,
       folio: v.folio, fecha: new Date(v.fecha), cliente: v.clientes?.nombre, barbero: barberos.find((b) => b.id === v.barbero_id)?.nombre,
-      partidas: (v.venta_items || []).map((i) => ({ cantidad: i.cantidad, nombre: i.nombre, importe: Number(i.importe) })),
+      partidas: (v.venta_items || []).map((i) => ({ cantidad: i.cantidad, nombre: i.nombre, importe: Number(i.importe), producto: i.tipo === 'producto' })),
       descuento: Number(v.descuento), propina: Number(v.propina), total: Number(v.total), enLinea: Number(v.pagado_en_linea || 0),
       metodo: v.metodo_pago, anulada: v.estado === 'anulada',
       }, anchoGuardado());

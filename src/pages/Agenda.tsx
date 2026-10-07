@@ -18,6 +18,7 @@ export default function Agenda() {
   const [dia, setDia] = useState(isoDia(new Date()));
   const [citas, setCitas] = useState<Cita[]>([]);
   const [fila, setFila] = useState<Cita[]>([]);
+  const [porReagendar, setPorReagendar] = useState<Cita[]>([]);
   const [bloqueos, setBloqueos] = useState<Bloqueo[]>([]);
   const [soloMia, setSoloMia] = useState(miembro.rol === 'barbero' && !!miembro.barbero_id);
   const [barberoMovil, setBarberoMovil] = useState<string | null>(miembro.barbero_id);
@@ -35,17 +36,21 @@ export default function Agenda() {
   const cargar = useCallback(async () => {
     const desde = deIsoDia(dia);
     const hasta = sumarDias(desde, 1);
-    const [c, f, b] = await Promise.all([
+    const [c, f, b, r] = await Promise.all([
       supabase.from('citas').select('*, clientes(nombre, telefono)').eq('negocio_id', negocio.id)
         .gte('inicio', desde.toISOString()).lt('inicio', hasta.toISOString()).in('estado', ACTIVAS).order('inicio'),
       supabase.from('citas').select('*, clientes(nombre, telefono)').eq('negocio_id', negocio.id)
         .eq('estado', 'en_espera').order('created_at'),
       supabase.from('bloqueos').select('*').eq('negocio_id', negocio.id)
         .lt('inicio', hasta.toISOString()).gt('fin', desde.toISOString()),
+      // Citas pagadas en línea que se cancelaron: el pago queda a favor del cliente para reagendar.
+      supabase.from('citas').select('*, clientes(nombre, telefono)').eq('negocio_id', negocio.id)
+        .eq('estado', 'cancelada').eq('pago_estado', 'pagado').gte('inicio', new Date(Date.now() - 90 * 864e5).toISOString()).order('inicio'),
     ]);
     // Los apartados en línea que vencieron sin pagarse ya no ocupan lugar.
     setCitas(((c.data as Cita[]) || []).filter((x) => !apartadoVencido(x)));
     setFila((f.data as Cita[]) || []);
+    setPorReagendar((r.data as Cita[]) || []);
     setBloqueos((b.data as Bloqueo[]) || []);
   }, [dia, negocio.id]);
 
@@ -141,6 +146,26 @@ export default function Agenda() {
                   </div>
                 </div>
                 {puede('agenda') && <button className="btn btn-chico btn-primario" onClick={() => setDetalle(c)}>Atender</button>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {porReagendar.length > 0 && puede('agenda') && (
+        <section className="tarjeta fila-espera">
+          <h2>Pagadas por reagendar <span className="insignia">{porReagendar.length}</span></h2>
+          <p className="tenue pequeno">Se cancelaron después de pagar en línea. El pago se conserva para la nueva fecha.</p>
+          <ul>
+            {porReagendar.map((c) => (
+              <li key={c.id}>
+                <div className="crece">
+                  <strong>{c.clientes?.nombre || c.cliente_nombre || 'Cliente'}</strong>
+                  <div className="tenue pequeno">
+                    {servicios.find((s) => s.id === c.servicio_id)?.nombre || 'Servicio'} · era el {fechaLarga(c.inicio)} · pagó {dinero(c.pago_monto, negocio.moneda)}
+                  </div>
+                </div>
+                <button className="btn btn-chico btn-primario" onClick={() => setBorrador({ cita: c, barberoId: c.barbero_id, inicio: new Date(Math.max(Date.now(), +new Date(c.inicio))) })}>Reagendar</button>
               </li>
             ))}
           </ul>
@@ -254,6 +279,7 @@ function FormCita({ borrador, onCerrar, onGuardado }: { borrador: Borrador; onCe
   const [notas, setNotas] = useState(c?.notas || '');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const reagendar = c?.estado === 'cancelada';
 
   async function guardar(e: FormEvent) {
     e.preventDefault();
@@ -272,7 +298,7 @@ function FormCita({ borrador, onCerrar, onGuardado }: { borrador: Borrador; onCe
         inicio: inicio.toISOString(), fin: fin.toISOString(), precio: serv?.precio ?? null, notas: notas.trim() || null,
       };
       const { error } = c
-        ? await supabase.from('citas').update(datos).eq('id', c.id)
+        ? await supabase.from('citas').update(reagendar ? { ...datos, estado: 'confirmada' } : datos).eq('id', c.id)
         : await supabase.from('citas').insert({ ...datos, estado: 'confirmada', origen: 'agenda', creado_por: session?.user.id });
       if (error) throw error;
       onGuardado();
@@ -284,8 +310,9 @@ function FormCita({ borrador, onCerrar, onGuardado }: { borrador: Borrador; onCe
   }
 
   return (
-    <Modal titulo={c ? 'Editar cita' : 'Nueva cita'} onCerrar={onCerrar}>
+    <Modal titulo={reagendar ? 'Reagendar cita' : c ? 'Editar cita' : 'Nueva cita'} onCerrar={onCerrar}>
       <form onSubmit={guardar} className="formulario">
+        {reagendar && c?.pago_estado === 'pagado' && <p className="tenue pequeno">El cliente ya pagó {dinero(c.pago_monto, negocio.moneda)} en línea; el pago pasa a la nueva fecha.</p>}
         <Campo etiqueta="Cliente"><ClienteBuscador negocioId={negocio.id} valor={cliente} onCambio={setCliente} /></Campo>
         <Campo etiqueta="Servicio">
           <select value={servicioId} onChange={(e) => {
@@ -310,7 +337,7 @@ function FormCita({ borrador, onCerrar, onGuardado }: { borrador: Borrador; onCe
         <Aviso>{error}</Aviso>
         <div className="acciones">
           <button type="button" className="btn" onClick={onCerrar}>Cancelar</button>
-          <button className="btn btn-primario" disabled={enviando}>{c ? 'Guardar cambios' : 'Agendar'}</button>
+          <button className="btn btn-primario" disabled={enviando}>{reagendar ? 'Reagendar' : c ? 'Guardar cambios' : 'Agendar'}</button>
         </div>
       </form>
     </Modal>
@@ -481,12 +508,13 @@ function DetalleCita({ cita, onCerrar, onCambio, onEditar, onCobrar }: {
               <button className="btn" onClick={() => cambiar('no_asistio')}>No llegó</button>
               <button className="btn" onClick={onEditar}>Mover / editar</button>
               <button className="btn btn-peligro" onClick={() => confirm(cita.pago_estado === 'pagado'
-                ? `El cliente ya pagó ${dinero(cita.pago_monto, negocio.moneda)} en línea. Si cancelas, devuélvele el dinero desde tu cuenta de Mercado Pago. ¿Cancelar la cita?`
+                ? `El cliente ya pagó ${dinero(cita.pago_monto, negocio.moneda)} en línea. El pago no se devuelve: queda a su favor para reagendar (aparece en "Pagadas por reagendar"). ¿Cancelar la cita?`
                 : '¿Cancelar la cita?') && cambiar('cancelada')}>Cancelar cita</button>
             </>
           )}
           {cita.estado === 'en_curso' && <button className="btn" onClick={onEditar}>Editar</button>}
           {cita.estado === 'no_asistio' && <button className="btn" onClick={() => cambiar('confirmada')}>Deshacer</button>}
+          {cita.estado === 'cancelada' && cita.pago_estado === 'pagado' && <button className="btn btn-primario" onClick={onEditar}>Reagendar</button>}
           {wa && cita.estado !== 'completada' && <a className="btn" href={wa} target="_blank" rel="noreferrer">WhatsApp</a>}
         </div>
       )}

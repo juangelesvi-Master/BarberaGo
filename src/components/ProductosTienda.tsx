@@ -11,6 +11,7 @@ export default function ProductosTienda({ productos, carrito, onCambiar, moneda,
   productos: ProductoEnLinea[]; carrito: Carrito; onCambiar: (id: string, n: number) => void; moneda: string; vista?: 'lista' | 'cuadricula';
 }) {
   return (
+    <>
     <div className={vista === 'cuadricula' ? 'productos-cuadricula' : 'productos-lista'}>
       {productos.map((p) => {
         const n = carrito[p.id] || 0;
@@ -53,8 +54,13 @@ export default function ProductosTienda({ productos, carrito, onCambiar, moneda,
         );
       })}
     </div>
+    <p className="tenue pequeno aviso-productos">{AVISO_PRODUCTOS}</p>
+    </>
   );
 }
+
+/** Política de la plataforma: los productos no se cambian ni se devuelven. */
+export const AVISO_PRODUCTOS = 'Los productos no tienen cambios ni devoluciones.';
 
 /** Productos del carrito con su cantidad, listos para mandar a la función de pagos. */
 export function lineasDelCarrito(carrito: Carrito) {
