@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Api, ClienteConMascotas } from './api';
-import type { Mascota, Pedido, Perfil, Reserva } from './tipos';
+import type { Camara, CamaraCliente, Mascota, Pedido, Perfil, ReporteVentas, Reserva } from './tipos';
 
 // Valores por defecto: proyecto Supabase "CanSuites". La llave publicable es pública por diseño;
 // la seguridad la dan las políticas RLS de la base.
@@ -235,5 +235,32 @@ export const apiSupabase: Api = {
   },
   async marcarReembolsado(reservaId) {
     ok(await supabase.rpc('marcar_reembolsado', { p_reserva: reservaId }));
+  },
+  async misCamaras() {
+    return (ok(await supabase.rpc('mis_camaras')) as CamaraCliente[]) || [];
+  },
+  async camaras() {
+    return ok(await supabase.from('camaras').select('*').order('orden').order('nombre')) as Camara[];
+  },
+  async guardarCamara(c) {
+    const { id, created_at: _c, ...datos } = c;
+    ok(id ? await supabase.from('camaras').update(datos).eq('id', id) : await supabase.from('camaras').insert(datos));
+  },
+  async borrarCamara(id) {
+    ok(await supabase.from('camaras').delete().eq('id', id));
+  },
+  async reporteVentas(desde, hasta) {
+    const r = ok(await supabase.rpc('reporte_ventas', { p_desde: desde, p_hasta: hasta })) as ReporteVentas;
+    // numeric llega como número en jsonb; se normaliza por si acaso.
+    const n = (x: unknown) => Number(x || 0);
+    return {
+      servicios: { total: n(r.servicios.total), cantidad: n(r.servicios.cantidad), en_linea: n(r.servicios.en_linea) },
+      por_servicio: r.por_servicio.map((x) => ({ ...x, cantidad: n(x.cantidad), unidades: n(x.unidades), total: n(x.total) })),
+      tienda: { total: n(r.tienda.total), cantidad: n(r.tienda.cantidad) },
+      productos: r.productos.map((x) => ({ ...x, cantidad: n(x.cantidad), total: n(x.total) })),
+      por_dia: r.por_dia.map((x) => ({ dia: x.dia, servicios: n(x.servicios), tienda: n(x.tienda) })),
+      reembolsos: { total: n(r.reembolsos.total), cantidad: n(r.reembolsos.cantidad) },
+      por_cobrar: { total: n(r.por_cobrar.total), cantidad: n(r.por_cobrar.cantidad) },
+    };
   },
 };

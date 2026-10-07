@@ -1,5 +1,5 @@
 import type {
-  Ajustes, EstadoPedido, EstadoReserva, Mascota, NuevaReserva, Pedido, Perfil, Producto, RegistroMedico, Reserva, Servicio,
+  Ajustes, Camara, CamaraCliente, EstadoPedido, EstadoReserva, Mascota, NuevaReserva, Pedido, Perfil, Producto, RegistroMedico, ReporteVentas, Reserva, Servicio,
 } from './tipos';
 import { diaIso, deIsoDia, minutos } from './formato';
 
@@ -52,6 +52,8 @@ export interface Api {
   cancelarReserva(id: string): Promise<void>;
   pedir(items: { producto_id: string; cantidad: number }[], notas: string | null): Promise<Pedido>;
   misPedidos(): Promise<Pedido[]>;
+  /** Cámaras que puede ver el cliente: solo mientras tiene una mascota en hotel o guardería (check-in hecho). */
+  misCamaras(): Promise<CamaraCliente[]>;
 
   // Personal
   reservas(desde: string, hasta: string): Promise<Reserva[]>;
@@ -72,6 +74,10 @@ export interface Api {
   reembolsar(reservaId: string): Promise<void>;
   /** Marca como devuelto lo que recepción reembolsó por su cuenta. */
   marcarReembolsado(reservaId: string): Promise<void>;
+  camaras(): Promise<Camara[]>;
+  guardarCamara(c: Partial<Camara> & { nombre: string; url: string }): Promise<void>;
+  borrarCamara(id: string): Promise<void>;
+  reporteVentas(desde: string, hasta: string): Promise<ReporteVentas>;
 }
 
 /** Horas de inicio de la estética para un día según el horario y el intervalo. */

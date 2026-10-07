@@ -26,7 +26,7 @@ export default function Admin() {
     return <Pagina angosta><Vacio>Esta sección es para el equipo de CanSuites. <Link to="/cuenta">Ir a mi cuenta</Link></Vacio></Pagina>;
   }
   const secciones: [string, string][] = [['/admin', '📋 Hoy'], ['/admin/reservas', '📅 Reservas'], ['/admin/clientes', '🐶 Clientes'], ['/admin/pedidos', '🛍️ Pedidos'], ['/admin/catalogo', '🏷️ Catálogo']];
-  if (perfil.rol === 'admin') secciones.push(['/admin/ajustes', '⚙️ Ajustes']);
+  if (perfil.rol === 'admin') secciones.push(['/admin/ventas', '📊 Ventas'], ['/admin/camaras', '📹 Cámaras'], ['/admin/ajustes', '⚙️ Ajustes']);
   return (
     <Pagina clase="admin">
       <nav className="chips-filtro admin-nav" aria-label="Panel">

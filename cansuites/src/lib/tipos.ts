@@ -130,6 +130,8 @@ export interface Reserva {
   /** Lo que ya se pagó en línea. */
   pagado: number;
   pago_expira: string | null;
+  /** Cuándo se terminó (check-out / entregado): el día que cuenta en el reporte de ventas. */
+  cerrada_at?: string | null;
   mascota_nombre?: string;
   servicio_nombre?: string;
   cliente_nombre?: string;
@@ -190,6 +192,7 @@ export interface Pedido {
   notas: string | null;
   created_at: string;
   items: PedidoItem[];
+  entregado_at?: string | null;
   cliente_nombre?: string;
   cliente_telefono?: string | null;
 }
@@ -213,3 +216,34 @@ export interface Ajustes {
 }
 
 export type ModoPago = 'no' | 'opcional' | 'obligatorio';
+
+/** Cámara en vivo (enlace del reproductor de IPCamLive, Angelcam, etc.). */
+export interface Camara {
+  id: string;
+  nombre: string;
+  url: string;
+  activa: boolean;
+  orden: number;
+  created_at: string;
+}
+
+/** Lo que ve el cliente mientras su mascota está en CanSuites. */
+export interface CamaraCliente {
+  id: string;
+  nombre: string;
+  url: string;
+  /** Nombres de sus mascotas hospedadas ahora. */
+  mascotas: string;
+}
+
+/** Reporte de ventas de un periodo: reservas terminadas y pedidos entregados, por el día en que se cerraron. */
+export interface ReporteVentas {
+  servicios: { total: number; cantidad: number; en_linea: number };
+  por_servicio: { tipo: TipoServicio; nombre: string; cantidad: number; unidades: number; total: number }[];
+  tienda: { total: number; cantidad: number };
+  productos: { nombre: string; cantidad: number; total: number }[];
+  por_dia: { dia: string; servicios: number; tienda: number }[];
+  reembolsos: { total: number; cantidad: number };
+  /** Lo que falta cobrar de las mascotas que están en CanSuites ahora. */
+  por_cobrar: { total: number; cantidad: number };
+}

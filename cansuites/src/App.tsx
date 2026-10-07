@@ -7,6 +7,8 @@ import Tienda from './pages/Tienda';
 import Entrar from './pages/Entrar';
 import Cuenta, { MascotaCuenta } from './pages/cuenta/Cuenta';
 import PagoReserva from './pages/cuenta/PagoReserva';
+import Ventas from './pages/admin/Ventas';
+import CamarasAdmin from './pages/admin/Camaras';
 import Admin, { AjustesAdmin, Catalogo, ClienteDetalle, Clientes, Hoy, MascotaAdmin, Pedidos, Reservas } from './pages/admin/Admin';
 
 /** Al cambiar de página sube al inicio, o baja a la sección del #ancla. */
@@ -43,6 +45,8 @@ export default function App() {
             <Route path="mascota/:id" element={<MascotaAdmin />} />
             <Route path="pedidos" element={<Pedidos />} />
             <Route path="catalogo" element={<Catalogo />} />
+            <Route path="ventas" element={<Ventas />} />
+            <Route path="camaras" element={<CamarasAdmin />} />
             <Route path="ajustes" element={<AjustesAdmin />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

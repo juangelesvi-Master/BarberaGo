@@ -2,7 +2,7 @@ import type { Api, ClienteConMascotas } from './api';
 import { AJUSTES_INICIALES, diasOcupados, horasDelDia } from './api';
 import { esperandoPago } from './tipos';
 import type {
-  Ajustes, Mascota, Pedido, Perfil, Producto, RegistroMedico, Reserva, Servicio,
+  Ajustes, Camara, Mascota, Pedido, Perfil, Producto, RegistroMedico, ReporteVentas, Reserva, Servicio,
 } from './tipos';
 import { diasEntre, hoyIso, sumarDiasIso } from './formato';
 import { SERVICIOS_INICIALES, PRODUCTOS_INICIALES } from './catalogo';
@@ -23,6 +23,7 @@ interface Db {
   productos: Producto[];
   reservas: Reserva[];
   pedidos: Pedido[];
+  camaras: Camara[];
   ajustes: Ajustes;
 }
 
@@ -79,13 +80,27 @@ function semilla(): Db {
       res(max, serv('hotel'), d(10), d(14), null, 'pendiente', 3),
       res(rocco, serv('guarderia'), d(0), d(0), null, 'en_curso', 4),
       res(rocco, serv('estetica', 'M'), d(0), d(0), '12:00', 'confirmada', 5),
+      res(max, serv('hotel'), d(-1), d(2), null, 'en_curso', 6),
+      res(rocco, serv('estetica', 'M'), d(-5), d(-5), '10:00', 'completada', 7),
+      res(luna, serv('guarderia'), d(-8), d(-6), null, 'completada', 8),
     ],
     pedidos: [{
       id: id(), folio: 1, cliente_id: ana.id, estado: 'listo', total: productos[0].precio + productos[2].precio, notas: null, created_at: ahora(),
       items: [productos[0], productos[2]].map((p) => ({ producto_id: p.id, nombre: p.nombre, cantidad: 1, precio_unit: p.precio })),
+    }, {
+      id: id(), folio: 2, cliente_id: luis.id, estado: 'entregado', total: productos[1].precio * 2 + productos[4].precio, notas: null, created_at: `${d(-3)}T17:00:00`, entregado_at: `${d(-3)}T18:00:00`,
+      items: [{ p: productos[1], n: 2 }, { p: productos[4], n: 1 }].map(({ p, n }) => ({ producto_id: p.id, nombre: p.nombre, cantidad: n, precio_unit: p.precio })),
     }],
+    camaras: [],
     ajustes: AJUSTES_INICIALES,
   };
+}
+
+/** Día local ("YYYY-MM-DD") de una fecha y hora guardada. */
+function diaLocal(t: string): string {
+  const f = new Date(t);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${f.getFullYear()}-${p(f.getMonth() + 1)}-${p(f.getDate())}`;
 }
 
 const SIN_PAGO = { pago_estado: 'sin_pago', pago_monto: 0, pagado: 0, pago_expira: null } as const;
@@ -98,6 +113,7 @@ function leer(): Db {
       const db = JSON.parse(t) as Db;
       db.ajustes = { ...AJUSTES_INICIALES, ...db.ajustes };
       db.reservas = db.reservas.map((r) => ({ ...SIN_PAGO, ...r }));
+      db.camaras = db.camaras || [];
       return db;
     }
   } catch { /* sin almacenamiento */ }
@@ -401,7 +417,11 @@ export const apiDemo: Api = {
   async estadoReserva(rid, estado) {
     const db = leer(); if (!esPersonal(yo(db))) throw new Error('Sin permiso');
     const r = db.reservas.find((x) => x.id === rid);
-    if (r) { if (estado === 'cancelada') cancelar(r); else r.estado = estado; guardar(db); }
+    if (r) {
+      if (estado === 'cancelada') cancelar(r);
+      else { if (estado === 'completada' && r.estado !== 'completada') r.cerrada_at = ahora(); r.estado = estado; }
+      guardar(db);
+    }
   },
   async clientes(busqueda) {
     const db = leer(); if (!esPersonal(yo(db))) throw new Error('Sin permiso');
@@ -437,6 +457,7 @@ export const apiDemo: Api = {
     if (estado === 'cancelado' && p.estado !== 'cancelado') {
       p.items.forEach((i) => { const pr = db.productos.find((x) => x.id === i.producto_id); if (pr) pr.stock += i.cantidad; });
     }
+    if (estado === 'entregado' && p.estado !== 'entregado') p.entregado_at = ahora();
     p.estado = estado; guardar(db);
   },
   async guardarServicio(s) {
@@ -478,5 +499,60 @@ export const apiDemo: Api = {
     const db = leer(); if (!esPersonal(yo(db))) throw new Error('Sin permiso');
     const r = db.reservas.find((x) => x.id === rid && x.pago_estado === 'por_reembolsar');
     if (r) { r.pago_estado = 'reembolsado'; guardar(db); }
+  },  async misCamaras() {
+    const db = leer(); const u = yo(db);
+    const dentro = db.reservas.filter((r) => r.cliente_id === u.id && r.estado === 'en_curso' && r.tipo !== 'estetica');
+    const mascotas = [...new Set(dentro.map((r) => db.mascotas.find((m) => m.id === r.mascota_id)?.nombre).filter(Boolean))].join(', ');
+    if (!mascotas) return pausa([]);
+    return pausa(db.camaras.filter((c) => c.activa).sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre)).map((c) => ({ id: c.id, nombre: c.nombre, url: c.url, mascotas })));
+  },
+  async camaras() {
+    const db = leer(); if (!esPersonal(yo(db))) throw new Error('Sin permiso');
+    return pausa([...db.camaras].sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre)));
+  },
+  async guardarCamara(c) {
+    const db = leer(); if (yo(db).rol !== 'admin') throw new Error('Solo el administrador cambia las cámaras');
+    if (!/^https:\/\//.test(c.url)) throw new Error('El enlace debe empezar con https://');
+    const actual = c.id && db.camaras.find((x) => x.id === c.id);
+    if (actual) Object.assign(actual, c);
+    else db.camaras.push({ activa: true, orden: db.camaras.length, created_at: ahora(), ...c, id: id() });
+    guardar(db);
+  },
+  async borrarCamara(cid) {
+    const db = leer(); if (yo(db).rol !== 'admin') throw new Error('Solo el administrador cambia las cámaras');
+    db.camaras = db.camaras.filter((c) => c.id !== cid); guardar(db);
+  },
+  async reporteVentas(desde, hasta) {
+    const db = leer(); if (yo(db).rol !== 'admin') throw new Error('Solo el administrador ve el reporte de ventas');
+    const dia = (t: string | null | undefined, otro: string) => (t ? diaLocal(t) : otro);
+    const res = db.reservas.filter((r) => r.estado === 'completada').map((r) => ({ r, dia: dia(r.cerrada_at, r.salida) })).filter((x) => x.dia >= desde && x.dia <= hasta);
+    const ped = db.pedidos.filter((p) => p.estado === 'entregado').map((p) => ({ p, dia: dia(p.entregado_at || p.created_at, '') })).filter((x) => x.dia >= desde && x.dia <= hasta);
+    const suma = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+    const porServicio = new Map<string, ReporteVentas['por_servicio'][number]>();
+    for (const { r } of res) {
+      const nombre = db.servicios.find((s) => s.id === r.servicio_id)?.nombre || '';
+      const x = porServicio.get(nombre) || { tipo: r.tipo, nombre, cantidad: 0, unidades: 0, total: 0 };
+      x.cantidad += 1; x.unidades += r.unidades; x.total += r.total; porServicio.set(nombre, x);
+    }
+    const productos = new Map<string, { nombre: string; cantidad: number; total: number }>();
+    for (const { p } of ped) for (const i of p.items) {
+      const x = productos.get(i.nombre) || { nombre: i.nombre, cantidad: 0, total: 0 };
+      x.cantidad += i.cantidad; x.total += i.cantidad * i.precio_unit; productos.set(i.nombre, x);
+    }
+    const dias = new Map<string, { dia: string; servicios: number; tienda: number }>();
+    const enDia = (d: string) => { const x = dias.get(d) || { dia: d, servicios: 0, tienda: 0 }; dias.set(d, x); return x; };
+    res.forEach(({ r, dia: d }) => { enDia(d).servicios += r.total; });
+    ped.forEach(({ p, dia: d }) => { enDia(d).tienda += p.total; });
+    const reemb = db.reservas.filter((r) => r.pago_estado === 'reembolsado' && r.entrada >= desde && r.entrada <= hasta);
+    const dentro = db.reservas.filter((r) => r.estado === 'en_curso');
+    return pausa({
+      servicios: { total: suma(res.map((x) => x.r.total)), cantidad: res.length, en_linea: suma(res.map((x) => (x.r.pago_estado === 'pagado' ? x.r.pagado : 0))) },
+      por_servicio: [...porServicio.values()].sort((a, b) => b.total - a.total),
+      tienda: { total: suma(ped.map((x) => x.p.total)), cantidad: ped.length },
+      productos: [...productos.values()].sort((a, b) => b.total - a.total).slice(0, 15),
+      por_dia: [...dias.values()].sort((a, b) => a.dia.localeCompare(b.dia)),
+      reembolsos: { total: suma(reemb.map((r) => r.pagado)), cantidad: reemb.length },
+      por_cobrar: { total: suma(dentro.map((r) => r.total - (r.pago_estado === 'pagado' ? r.pagado : 0))), cantidad: dentro.length },
+    });
   },
 };

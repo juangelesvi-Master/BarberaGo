@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, mensajeError } from '../../lib/datos';
 import { useCuenta } from '../../lib/cuenta';
-import type { Mascota, Pedido, Reserva } from '../../lib/tipos';
+import type { CamaraCliente, Mascota, Pedido, Reserva } from '../../lib/tipos';
 import { TALLAS, esperandoPago } from '../../lib/tipos';
 import { edad, hoyIso, precio } from '../../lib/formato';
 import { Aviso, Campo, Cargando, Modal, Vacio } from '../../components/ui';
@@ -11,6 +11,7 @@ import { FilaPedido, FilaReserva } from '../../components/Listas';
 import Expediente from '../../components/Expediente';
 import CambiarFecha from '../../components/CambiarFecha';
 import FormMascota from '../../components/FormMascota';
+import { VisorCamara } from '../admin/Camaras';
 
 type Vista = 'mascotas' | 'reservas' | 'pedidos' | 'datos';
 const VISTAS: { id: Vista; nombre: string }[] = [
@@ -48,6 +49,7 @@ export default function Cuenta() {
           <button className="btn" onClick={salir}>Cerrar sesión</button>
         </div>
       </div>
+      <CamarasEnVivo />
       <div className="chips-filtro pestanas-cuenta" role="tablist">
         {VISTAS.map((v) => (
           <button key={v.id} role="tab" aria-selected={v.id === vista} className={v.id === vista ? 'elegida' : ''}
@@ -59,6 +61,29 @@ export default function Cuenta() {
       {vista === 'pedidos' && <MisPedidos />}
       {vista === 'datos' && <MisDatos />}
     </Pagina>
+  );
+}
+
+/** Aviso con el botón para ver las cámaras: solo aparece mientras su perro está en el hotel o la guardería. */
+function CamarasEnVivo() {
+  const [camaras, setCamaras] = useState<CamaraCliente[]>([]);
+  const [abierta, setAbierta] = useState(false);
+  useEffect(() => {
+    const cargar = () => api.misCamaras().then(setCamaras).catch(() => setCamaras([]));
+    cargar();
+    // Si recepción hace el check-out mientras la página está abierta, el botón se va solo.
+    const t = setInterval(cargar, 60_000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => { if (!camaras.length) setAbierta(false); }, [camaras]);
+  if (!camaras.length) return null;
+  const varios = camaras[0].mascotas.includes(',');
+  return (
+    <div className="tarjeta aviso-camara">
+      <p>🐾 <strong>{camaras[0].mascotas}</strong> {varios ? 'están' : 'está'} en CanSuites. {varios ? 'Míralos' : 'Míralo'} en vivo mientras {varios ? 'te esperan' : 'te espera'}.</p>
+      <button className="btn btn-primario" onClick={() => setAbierta(true)}>📹 Ver cámaras</button>
+      {abierta && <VisorCamara nombre={camaras[0].nombre} url={camaras[0].url} otras={camaras} onCerrar={() => setAbierta(false)} />}
+    </div>
   );
 }
 
