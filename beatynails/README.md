@@ -23,9 +23,13 @@ hosting estático (Hostinger, Netlify, Vercel).
 
 - **Resumen:** ingresos de servicios y tienda, citas atendidas, ventas, citas por venir, gráfica de
   ingresos de los últimos 14 días, agenda de hoy, pedidos por atender, más vendidos e inventario bajo.
+- **Venta de mostrador:** cobra servicios, productos u otros conceptos en el salón, con descuento
+  ($ o %), pago en efectivo (con cambio), tarjeta o transferencia. Descuenta inventario, marca la cita
+  como cobrada si vienes de "Cobrar" en la agenda, imprime el ticket y muestra la caja del día con
+  su corte de caja por forma de pago. Cancelar una venta en **Ventas** regresa el inventario.
 - **Citas:** filtros por día, manicurista y estado; cambiar hora, día, servicio o manicurista
   (sin encimar citas), marcar atendida / no asistió / cancelada, agregar o eliminar citas.
-- **Ventas:** pedidos de la tienda con su estado (nuevo, listo, entregado, cancelado).
+- **Ventas:** ventas de mostrador y pedidos de la tienda en línea, con su estado.
 - **Productos:** agregar, editar, ocultar o eliminar productos, subir foto e inventario. La tienda
   marca "Agotado" y descuenta piezas en cada pedido.
 - **Horario y servicios:** horario por día, cada cuánto hay cita, manicuristas, servicios y precios,

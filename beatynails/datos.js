@@ -109,6 +109,7 @@
     products: function () { return load("bn_products", clone(DEFAULTS.products)); },
     bookings: function () { return load("bn_bookings", []); },
     orders: function () { return load("bn_orders", []); },
+    sales: function () { return load("bn_sales", []); },
     stamp: function () { var d = new Date(); return ymd(d) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); },
     // Ocupada si otra cita activa de la misma manicurista se cruza con ese horario
     busy: function (bookings, staff, date, start, len, ignoreId) {
@@ -120,6 +121,40 @@
 
   // ---------- Datos de ejemplo (marcados con demo: true; se borran desde el panel) ----------
   BN.seed = function () {
+    seedV2();
+    seedSales();
+  };
+  // Ventas de mostrador de ejemplo: cobra parte de las citas de ejemplo ya atendidas y agrega
+  // algunas compras de productos sin cita
+  function seedSales() {
+    if (load("bn_seed_v3", false)) return;
+    var seedN = 11;
+    function rnd() { seedN = (seedN * 16807) % 2147483647; return (seedN - 1) / 2147483646; }
+    function pick(a) { return a[Math.floor(rnd() * a.length)]; }
+    var bookings = BN.bookings(), products = BN.products(), sales = BN.sales().filter(function (x) { return !x.demo; });
+    var methods = ["efectivo", "efectivo", "tarjeta", "tarjeta", "transferencia"], n = 0;
+    function addSale(date, time, name, staff, items, bookingId) {
+      var sub = items.reduce(function (a, i) { return a + i.q * i.price; }, 0), disc = rnd() < .15 ? Math.round(sub * .1) : 0, total = sub - disc, m = pick(methods);
+      var rec = m === "efectivo" ? Math.ceil(total / 100) * 100 + (rnd() < .4 ? 100 : 0) : null;
+      sales.push({ id: "M-" + (800 + n++), demo: true, created: date + "T" + time, name: name, staff: staff, items: items, subtotal: sub, discount: disc, total: total, method: m, received: rec, change: rec != null ? rec - total : null, status: "pagada", bookingId: bookingId || null });
+    }
+    bookings.forEach(function (b) {
+      if (!b.demo || b.status !== "completada" || rnd() > .7) return;
+      var items = [{ type: "servicio", id: b.service, name: b.serviceName, q: 1, price: b.price }];
+      if (rnd() < .25) { var p = pick(products); items.push({ type: "producto", id: p.id, name: p.name, q: 1, price: p.price }); }
+      var id = "M-" + (800 + n);
+      addSale(b.date, hm(b.start + b.min) + ":00", b.name, b.staff, items, b.id);
+      b.saleId = id;
+    });
+    var today = ymd(new Date());
+    for (var off = -13; off <= 0; off++) {
+      if (rnd() < .5) continue;
+      var p = pick(products);
+      addSale(addDays(today, off), pad(11 + Math.floor(rnd() * 7)) + ":" + pad(Math.floor(rnd() * 60)) + ":00", "", "", [{ type: "producto", id: p.id, name: p.name, q: 1 + Math.floor(rnd() * 2), price: p.price }]);
+    }
+    save("bn_bookings", bookings); save("bn_sales", sales); save("bn_seed_v3", true);
+  }
+  function seedV2() {
     if (load("bn_seed_v2", false)) return;
     var seedN = 7;
     function rnd() { seedN = (seedN * 16807) % 2147483647; return (seedN - 1) / 2147483646; }
@@ -154,10 +189,11 @@
       }
     }
     save("bn_bookings", bookings); save("bn_orders", orders); save("bn_seed_v2", true); save("bn_seeded", true);
-  };
+  }
   BN.clearDemo = function () {
     save("bn_bookings", BN.bookings().filter(function (b) { return !b.demo; }));
     save("bn_orders", BN.orders().filter(function (o) { return !o.demo; }));
+    save("bn_sales", BN.sales().filter(function (x) { return !x.demo; }));
   };
 
   window.BN = BN;

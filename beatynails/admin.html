@@ -204,6 +204,47 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
 .err { background: var(--bad-bg); color: var(--bad); border-radius: 9px; padding: 9px 12px; font-size: 14px; }
 .hint { font-size: 13px; color: var(--muted); margin: 0; }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 14px; z-index: 60; }
+/* Venta de mostrador */
+.pos { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-areas: "cat cart" "cash cart"; grid-template-rows: auto 1fr; gap: 16px; align-items: start; }
+.pos-cat { grid-area: cat; } .pos-cash { grid-area: cash; }
+.pos-cart { grid-area: cart; position: sticky; top: 16px; display: grid; gap: 14px; }
+@media (max-width: 960px) { .pos { grid-template-columns: 1fr; grid-template-areas: "cat" "cart" "cash"; grid-template-rows: auto; } .pos-cart { position: static; } }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+.tile { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-content: start; border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; background: var(--surface); }
+.tile:hover { border-color: var(--ink); }
+.tile:focus-visible { outline: 2px solid var(--lacquer); outline-offset: 2px; }
+.tile[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+.tile img { grid-row: span 3; width: 40px; height: 50px; object-fit: cover; border-radius: 6px; }
+.tile b { font-weight: 600; font-size: 14px; line-height: 1.3; }
+.tile .meta { font-size: 12px; color: var(--muted); }
+.tile .price { font-family: var(--display); font-size: 18px; }
+.tile.svc { grid-template-columns: 1fr; }
+.custom { display: grid; grid-template-columns: minmax(0, 1fr) 110px auto; gap: 8px; margin-top: 14px; }
+.pos-lines { display: grid; }
+.pos-line { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.pos-line .nm { font-weight: 600; font-size: 14px; }
+.pos-line .unit { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.pos-line .unit input { width: 86px; padding: 4px 8px; }
+.pos-line .amt { font-weight: 700; min-width: 64px; text-align: right; }
+.qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; }
+.qty button { background: none; border: 0; width: 28px; height: 28px; cursor: pointer; font-size: 16px; color: var(--ink); }
+.qty span { min-width: 22px; text-align: center; font-size: 14px; }
+.pos-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
+.pos-row.big { font-family: var(--display); font-size: 30px; }
+.pos-disc { display: grid; grid-template-columns: minmax(0, 1fr) 70px; gap: 6px; max-width: 170px; }
+.pos-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.change { background: var(--ok-bg); color: var(--ok); border-radius: 10px; padding: 10px 12px; font-weight: 700; display: flex; justify-content: space-between; }
+.btn-xl { width: 100%; justify-content: center; padding: 14px; font-size: 17px; }
+.booking-banner { background: var(--info-bg); color: var(--info); border-radius: 10px; padding: 9px 12px; font-size: 14px; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.done { text-align: center; display: grid; gap: 10px; justify-items: center; padding: 10px 0; }
+.done .ok-mark { width: 54px; height: 54px; border-radius: 50%; background: var(--ok-bg); color: var(--ok); display: grid; place-items: center; font-size: 28px; font-weight: 700; }
+.done h2 { font-family: var(--display); font-size: 28px; justify-content: center; }
+.cash-day { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.cash-day div { display: grid; gap: 2px; }
+.cash-day span { font-size: 12px; color: var(--muted); font-weight: 600; }
+.cash-day b { font-family: var(--display); font-weight: 400; font-size: 22px; }
+@media (max-width: 560px) { .cash-day { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 /* Ticket */
 .paper { background: #fffdf8; color: #1c1c1c; font: 12px/1.35 "Courier New", ui-monospace, monospace; padding: 16px 14px 22px; border-radius: 4px; box-shadow: 0 1px 0 var(--line), 0 6px 18px rgb(0 0 0 / .12); white-space: pre; overflow-x: auto; justify-self: center; max-width: 100%; }
 .paper .b { font-weight: 700; }
@@ -234,6 +275,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     <div class="brand">BeatyNails<small>Panel del salón</small></div>
     <nav class="nav" id="nav" aria-label="Secciones">
       <button type="button" data-go="resumen">Resumen</button>
+      <button type="button" data-go="caja">Venta de mostrador</button>
       <button type="button" data-go="citas">Citas <span class="badge num" id="bdgCitas" hidden></span></button>
       <button type="button" data-go="ventas">Ventas <span class="badge num" id="bdgVentas" hidden></span></button>
       <button type="button" data-go="productos">Productos</button>
@@ -266,8 +308,8 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       <div class="grid-2">
         <div class="card">
           <h2>Ingresos por día <span class="muted">últimos 14 días</span></h2>
-          <div class="legend"><span><i style="background:var(--s1)"></i>Servicios atendidos</span><span><i style="background:var(--s2)"></i>Tienda</span></div>
-          <div class="chart-wrap" id="chartWrap"><svg class="chart" id="chart" role="img" aria-label="Ingresos por día, servicios y tienda"></svg><div class="tip" id="tip" hidden></div></div>
+          <div class="legend"><span><i style="background:var(--s1)"></i>Servicios atendidos</span><span><i style="background:var(--s2)"></i>Productos</span></div>
+          <div class="chart-wrap" id="chartWrap"><svg class="chart" id="chart" role="img" aria-label="Ingresos por día, servicios y productos"></svg><div class="tip" id="tip" hidden></div></div>
         </div>
         <div class="card">
           <h2>Agenda de hoy <span class="muted" id="agendaCount"></span></h2>
@@ -278,6 +320,62 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
         <div class="card"><h2>Pedidos por atender</h2><ul class="list" id="pendOrders"></ul></div>
         <div class="card"><h2>Más vendidos <span class="muted">30 días</span></h2><div id="topProducts"></div></div>
         <div class="card"><h2>Inventario bajo</h2><ul class="list" id="lowStock"></ul></div>
+      </div>
+    </section>
+
+    <!-- VENTA DE MOSTRADOR -->
+    <section data-view="caja" hidden>
+      <div class="page-head">
+        <div><h1>Venta de mostrador</h1><p>Cobra servicios y productos en el salón. El inventario se descuenta al cobrar.</p></div>
+      </div>
+      <div class="pos">
+          <div class="card pos-cat">
+            <div class="toolbar" style="margin:0">
+              <div class="chips" id="posTabs" role="group" aria-label="Catálogo">
+                <button type="button" class="chip" data-tab="servicios">Servicios</button>
+                <button type="button" class="chip" data-tab="productos">Productos</button>
+              </div>
+              <input id="posSearch" class="grow" placeholder="Buscar (Enter agrega el primero)" aria-label="Buscar en el catálogo">
+            </div>
+            <div class="tiles" id="posGrid"></div>
+            <form class="custom" id="posCustom">
+              <input id="posCustomName" placeholder="Otro concepto (ej. retiro extra)" aria-label="Otro concepto">
+              <input id="posCustomPrice" type="number" min="0" step="1" placeholder="Precio" aria-label="Precio del concepto">
+              <button type="submit" class="btn btn-line">Agregar</button>
+            </form>
+          </div>
+          <div class="card pos-cash">
+            <h2>Caja de hoy <span class="muted" id="cashCount"></span></h2>
+            <div class="cash-day" id="cashDay"></div>
+            <div class="row-actions"><button type="button" class="btn btn-line btn-sm" id="cashTicket">Imprimir corte de caja</button><button type="button" class="linkbtn" data-goto="ventas">Ver todas las ventas</button></div>
+          </div>
+        <div class="card pos-cart">
+          <div id="posForm" style="display:grid;gap:14px">
+            <h2 style="margin:0">Venta actual <button type="button" class="linkbtn" id="posClear">Vaciar</button></h2>
+            <div class="booking-banner" id="posBooking" hidden></div>
+            <div class="two">
+              <label class="f" for="posName">Clienta (opcional)<input id="posName" autocomplete="off"></label>
+              <label class="f" for="posStaff">Atendió<select id="posStaff"></select></label>
+            </div>
+            <div class="pos-lines" id="posLines"></div>
+            <div class="pos-row"><span>Subtotal</span><b class="num" id="posSub">$0</b></div>
+            <div class="pos-row"><span>Descuento</span><span class="pos-disc"><input id="posDisc" type="number" min="0" step="1" placeholder="0" aria-label="Descuento"><select id="posDiscType" aria-label="Tipo de descuento"><option value="$">$</option><option value="%">%</option></select></span></div>
+            <div class="pos-row big"><span>Total</span><span class="num" id="posTotal">$0</span></div>
+            <div class="chips" id="posMethods" role="group" aria-label="Forma de pago">
+              <button type="button" class="chip" data-method="efectivo">Efectivo</button>
+              <button type="button" class="chip" data-method="tarjeta">Tarjeta</button>
+              <button type="button" class="chip" data-method="transferencia">Transferencia</button>
+            </div>
+            <div id="posCash" style="display:grid;gap:8px">
+              <label class="f" for="posReceived">Recibido en efectivo<input id="posReceived" type="number" min="0" step="1" placeholder="Exacto"></label>
+              <div class="pos-quick" id="posQuick"></div>
+              <div class="change" id="posChange" hidden></div>
+            </div>
+            <div class="err" id="posErr" hidden></div>
+            <button type="button" class="btn btn-primary btn-xl" id="posCharge">Cobrar</button>
+          </div>
+          <div id="posDone" hidden></div>
+        </div>
       </div>
     </section>
 
@@ -310,7 +408,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     <!-- VENTAS -->
     <section data-view="ventas" hidden>
       <div class="page-head">
-        <div><h1>Ventas</h1><p>Pedidos de la tienda en línea.</p></div>
+        <div><h1>Ventas</h1><p>Ventas de mostrador y pedidos de la tienda en línea.</p></div>
         <div class="chips" id="orRange" role="group" aria-label="Periodo">
           <button type="button" class="chip" data-range="1">Hoy</button>
           <button type="button" class="chip" data-range="7">7 días</button>
@@ -320,11 +418,16 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       </div>
       <div class="kpis" id="orKpis"></div>
       <div class="toolbar">
+        <div class="chips" id="orChannel" role="group" aria-label="Canal">
+          <button type="button" class="chip" data-ch="">Todas</button>
+          <button type="button" class="chip" data-ch="m">Mostrador</button>
+          <button type="button" class="chip" data-ch="o">En línea</button>
+        </div>
         <div class="chips" id="orStatusF" role="group" aria-label="Estado"></div>
       </div>
       <div class="table-wrap">
         <table class="t">
-          <thead><tr><th>Pedido</th><th>Cliente</th><th>Artículos</th><th>Entrega</th><th class="r">Total</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>Venta</th><th>Cliente</th><th>Artículos</th><th>Canal</th><th class="r">Total</th><th>Estado</th><th></th></tr></thead>
           <tbody id="orRows"></tbody>
         </table>
       </div>
@@ -481,6 +584,19 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   function oDate(o) { return (o.created || "").slice(0, 10); }
   function inRange(date, days) { return !days || (date <= TODAY && date >= BN.addDays(TODAY, -(days - 1))); }
   function shortDate(s) { var d = BN.parseDate(s); return d.getDate() + " " + BN.MONTHS[d.getMonth()]; }
+  // Ingresos por servicios y productos. Las citas cobradas en mostrador cuentan una sola vez (por su venta).
+  function income(pred, bookings, orders) {
+    var r = { svc: 0, prod: 0 };
+    BN.sales().forEach(function (v) {
+      if (v.status !== "pagada" || !pred(v.created.slice(0, 10))) return;
+      var f = v.subtotal ? v.total / v.subtotal : 0;
+      v.items.forEach(function (i) { var amt = i.q * i.price * f; if (i.type === "servicio") r.svc += amt; else r.prod += amt; });
+    });
+    (bookings || BN.bookings()).forEach(function (b) { if (b.status === "completada" && !b.saleId && pred(b.date)) r.svc += bPrice(b); });
+    (orders || BN.orders()).forEach(function (o) { if (o.status !== "cancelado" && pred(oDate(o))) r.prod += o.total; });
+    return r;
+  }
+  function isPaid(b) { return !!b.saleId; }
   function bookingSort(a, b) { return (a.date + hm(a.start)).localeCompare(b.date + hm(b.start)); }
 
   // Botones de dos pasos (en lugar de confirm(), que el navegador puede bloquear)
@@ -510,7 +626,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     $("#bdgCitas").hidden = !todayPending; $("#bdgCitas").textContent = todayPending;
     $("#bdgVentas").hidden = !newOrders; $("#bdgVentas").textContent = newOrders;
     $("#demoNote").hidden = !bookings.some(function (b) { return b.demo; }) && !orders.some(function (o) { return o.demo; });
-    ({ resumen: renderResumen, citas: renderCitas, ventas: renderVentas, productos: renderProductos, horario: renderHorario, impresora: renderImpresora })[current]();
+    ({ resumen: renderResumen, caja: renderCaja, citas: renderCitas, ventas: renderVentas, productos: renderProductos, horario: renderHorario, impresora: renderImpresora })[current]();
   }
   // Si la página está abierta en otra pestaña, refleja reservas y pedidos nuevos
   window.addEventListener("storage", function () { if (!$("#drawer").hidden) return; render(); });
@@ -529,15 +645,16 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     var done = rb.filter(function (b) { return b.status === "completada"; });
     var noShow = rb.filter(function (b) { return b.status === "no-asistio"; }).length;
     var ro = orders.filter(function (o) { return o.status !== "cancelado" && inRange(oDate(o), resRange); });
-    var svcIncome = done.reduce(function (a, b) { return a + bPrice(b); }, 0);
-    var shopIncome = ro.reduce(function (a, o) { return a + o.total; }, 0);
+    var rs = BN.sales().filter(function (v) { return v.status === "pagada" && inRange(v.created.slice(0, 10), resRange); });
+    var inc = income(function (d) { return inRange(d, resRange); });
+    var svcIncome = inc.svc, shopIncome = inc.prod;
     var upcoming = bookings.filter(function (b) { return b.status === "confirmada" && b.date >= TODAY; });
     var upValue = upcoming.reduce(function (a, b) { return a + bPrice(b); }, 0);
 
     $("#kpis").innerHTML = [
-      ["Ingresos totales", money(svcIncome + shopIncome), "Servicios " + money(svcIncome) + " · Tienda " + money(shopIncome)],
+      ["Ingresos totales", money(svcIncome + shopIncome), "Servicios " + money(svcIncome) + " · Productos " + money(shopIncome)],
       ["Citas atendidas", done.length, noShow ? noShow + (noShow === 1 ? " clienta no asistió" : " clientas no asistieron") : "Sin inasistencias"],
-      ["Ventas de la tienda", ro.length + (ro.length === 1 ? " pedido" : " pedidos"), ro.length ? "Ticket promedio " + money(shopIncome / ro.length) : "Sin pedidos " + label],
+      ["Ventas", rs.length + ro.length, "Mostrador " + rs.length + " · En línea " + ro.length],
       ["Citas por venir", upcoming.length, "Valor estimado " + money(upValue)]
     ].map(function (k) { return '<div class="kpi"><span class="label">' + k[0] + '</span><span class="value num">' + k[1] + '</span><span class="sub num">' + k[2] + '</span></div>'; }).join("");
 
@@ -548,7 +665,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     $("#agendaCount").textContent = today.length ? today.length + (today.length === 1 ? " cita" : " citas") : "";
     $("#agenda").innerHTML = today.length ? today.map(function (b) {
       return '<li><span class="time num">' + hm(b.start) + '</span><span class="who"><b>' + esc(b.name) + '</b><span>' + esc(svcName(b)) + ' · ' + esc(b.staff) + '</span></span><span class="acts">' +
-        (b.status === "confirmada" ? '<button type="button" class="linkbtn" data-quick="' + b.id + '" data-st="completada">Atendida</button><button type="button" class="linkbtn danger" data-quick="' + b.id + '" data-st="no-asistio">No vino</button>' : pill(b.status, B_STATUS) + (b.status === "completada" ? '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button>' : "")) + '</span></li>';
+        (b.status === "confirmada" ? '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button><button type="button" class="linkbtn danger" data-quick="' + b.id + '" data-st="no-asistio">No vino</button>' : pill(isPaid(b) ? "completada" : b.status, isPaid(b) ? { completada: "Cobrada" } : B_STATUS) + (b.status === "completada" ? (isPaid(b) ? "" : '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button>') + '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button>' : "")) + '</span></li>';
     }).join("") : '<li class="empty" style="display:block">No hay citas para hoy.</li>';
 
     // Pedidos por atender
@@ -561,6 +678,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     // Más vendidos (30 días)
     var units = {};
     orders.forEach(function (o) { if (o.status === "cancelado" || !inRange(oDate(o), 30)) return; o.items.forEach(function (i) { units[i.id] = (units[i.id] || 0) + i.q; }); });
+    BN.sales().forEach(function (v) { if (v.status !== "pagada" || !inRange(v.created.slice(0, 10), 30)) return; v.items.forEach(function (i) { if (i.type === "producto") units[i.id] = (units[i.id] || 0) + i.q; }); });
     var top = Object.keys(units).map(function (id) { var p = products.find(function (x) { return x.id === id; }); return { name: p ? p.name : id, q: units[id] }; }).sort(function (a, b) { return b.q - a.q; }).slice(0, 5);
     var maxQ = top.length ? top[0].q : 1;
     $("#topProducts").innerHTML = top.length ? top.map(function (t) { return '<div class="bar-row"><span>' + esc(t.name) + '</span><span class="num muted">' + t.q + ' pzas</span><span class="track"><i style="width:' + (t.q / maxQ * 100) + '%"></i></span></div>'; }).join("") : '<p class="empty">Aún no hay ventas.</p>';
@@ -577,9 +695,8 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     var days = [], N = 14;
     for (var i = N - 1; i >= 0; i--) days.push(BN.addDays(TODAY, -i));
     var data = days.map(function (d) {
-      var s = bookings.filter(function (b) { return b.date === d && b.status === "completada"; }).reduce(function (a, b) { return a + bPrice(b); }, 0);
-      var t = orders.filter(function (o) { return oDate(o) === d && o.status !== "cancelado"; }).reduce(function (a, o) { return a + o.total; }, 0);
-      return { d: d, s: s, t: t };
+      var inc = income(function (x) { return x === d; }, bookings, orders);
+      return { d: d, s: Math.round(inc.svc), t: Math.round(inc.prod) };
     });
     var svg = $("#chart"), W = svg.clientWidth || 600, H = 240, L = 48, R = 8, T = 10, Bm = 26;
     var max = Math.max.apply(null, data.map(function (x) { return x.s + x.t; }).concat([100]));
@@ -604,7 +721,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     svg.onmousemove = function (e) {
       var h = e.target.closest(".hit"); if (!h) { tip.hidden = true; return; }
       var x = data[+h.dataset.i], cx = L + bw * +h.dataset.i + bw / 2;
-      tip.innerHTML = "<b>" + esc(BN.niceDate(x.d)) + "</b><br>Servicios " + money(x.s) + "<br>Tienda " + money(x.t) + "<br><b>Total " + money(x.s + x.t) + "</b>";
+      tip.innerHTML = "<b>" + esc(BN.niceDate(x.d)) + "</b><br>Servicios " + money(x.s) + "<br>Productos " + money(x.t) + "<br><b>Total " + money(x.s + x.t) + "</b>";
       tip.style.left = Math.min(Math.max(cx / W * svg.clientWidth, 70), svg.clientWidth - 70) + "px"; tip.style.top = (y(x.s + x.t) - 8) / H * svg.clientHeight + "px"; tip.hidden = false;
     };
     svg.onmouseleave = function () { tip.hidden = true; };
@@ -622,7 +739,14 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     var q = e.target.closest("[data-quick]"); if (q) { setBookingStatus(q.dataset.quick, q.dataset.st); toast("Cita marcada como " + B_STATUS[q.dataset.st].toLowerCase()); render(); return; }
     var o = e.target.closest("[data-oquick]"); if (o) { setOrderStatus(o.dataset.oquick, o.dataset.st); toast("Pedido " + o.dataset.oquick + ": " + O_STATUS[o.dataset.st].toLowerCase()); render(); return; }
     var g = e.target.closest("[data-goto]"); if (g) { go(g.dataset.goto); return; }
-    var tb = e.target.closest("[data-ticketb]"); if (tb) { var bk = BN.bookings().find(function (x) { return x.id === tb.dataset.ticketb; }); if (bk) openTicket("Ticket de cita", Ticket.booking(bk, svcName(bk), bPrice(bk), Ticket.config())); return; }
+    var tb = e.target.closest("[data-ticketb]"); if (tb) {
+      var bk = BN.bookings().find(function (x) { return x.id === tb.dataset.ticketb; }); if (!bk) return;
+      var sv = bk.saleId && BN.sales().find(function (x) { return x.id === bk.saleId; });
+      if (sv) openTicket("Ticket " + sv.id, Ticket.sale(sv, Ticket.config())); else openTicket("Ticket de cita", Ticket.booking(bk, svcName(bk), bPrice(bk), Ticket.config()));
+      return;
+    }
+    var tv = e.target.closest("[data-tickets]"); if (tv) { var sl = BN.sales().find(function (x) { return x.id === tv.dataset.tickets; }); if (sl) openTicket("Ticket " + sl.id, Ticket.sale(sl, Ticket.config())); return; }
+    var ch = e.target.closest("[data-charge]"); if (ch) { chargeBooking(ch.dataset.charge); return; }
     var te = e.target.closest("[data-tickete]"); if (te) { var od = BN.orders().find(function (x) { return x.id === te.dataset.tickete; }); if (od) openTicket("Ticket " + od.id, Ticket.order(od, Ticket.config())); return; }
     var ep = e.target.closest("[data-editp]"); if (ep) { openProduct(ep.dataset.editp); return; }
     var ts = e.target.closest("[data-two-step]");
@@ -662,7 +786,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
         '<td class="cell-main"><b>' + esc(b.name) + '</b><span class="num">' + esc(b.phone || "") + (b.notes ? " · " + esc(b.notes) : "") + '</span></td>' +
         '<td>' + esc(svcName(b)) + '</td><td>' + esc(b.staff) + '</td><td class="r num">' + money(bPrice(b)) + '</td>' +
         '<td>' + statusSelect("bstatus", b.id, b.status || "confirmada", B_STATUS) + '</td>' +
-        '<td><div class="actions"><button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button><button type="button" class="linkbtn" data-editb="' + esc(b.id) + '">Cambiar</button><button type="button" class="linkbtn danger" data-delb="' + esc(b.id) + '">Eliminar</button></div></td></tr>';
+        '<td><div class="actions">' + (b.status !== "cancelada" && b.status !== "no-asistio" && !isPaid(b) ? '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button>' : isPaid(b) ? '<span class="pill st-completada">Cobrada</span>' : "") + '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button><button type="button" class="linkbtn" data-editb="' + esc(b.id) + '">Cambiar</button><button type="button" class="linkbtn danger" data-delb="' + esc(b.id) + '">Eliminar</button></div></td></tr>';
     });
     $("#bkRows").innerHTML = html || '<tr><td colspan="7" class="empty">No hay citas con estos filtros.</td></tr>';
   }
@@ -748,29 +872,47 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   var orRange = 30, orStatus = "";
   $("#orRange").addEventListener("click", function (e) { var b = e.target.closest("[data-range]"); if (!b) return; orRange = +b.dataset.range; renderVentas(); });
   $("#orStatusF").addEventListener("click", function (e) { var b = e.target.closest("[data-st]"); if (!b) return; orStatus = b.dataset.st; renderVentas(); });
+  var orChannel = "";
+  var V_STATUS = { "nuevo": "Nuevo", "listo": "Listo para entregar", "entregado": "Entregado", "pagada": "Pagada", "cancelado": "Cancelada" };
+  $("#orChannel").addEventListener("click", function (e) { var b = e.target.closest("[data-ch]"); if (!b) return; orChannel = b.dataset.ch; renderVentas(); });
   function renderVentas() {
     document.querySelectorAll("#orRange [data-range]").forEach(function (b) { b.setAttribute("aria-pressed", +b.dataset.range === orRange); });
-    var all = BN.orders().filter(function (o) { return inRange(oDate(o), orRange); });
-    var valid = all.filter(function (o) { return o.status !== "cancelado"; });
-    var total = valid.reduce(function (a, o) { return a + o.total; }, 0), units = valid.reduce(function (a, o) { return a + o.items.reduce(function (x, i) { return x + i.q; }, 0); }, 0);
-    var ship = valid.filter(function (o) { return o.delivery === "envio"; }).length;
+    document.querySelectorAll("#orChannel [data-ch]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.ch === orChannel); });
+    // Pedidos en línea y ventas de mostrador en una sola lista
+    var all = BN.orders().map(function (o) { return { kind: "o", rec: o, id: o.id, created: o.created || "", st: o.status, total: o.total, items: o.items }; })
+      .concat(BN.sales().map(function (v) { return { kind: "m", rec: v, id: v.id, created: v.created || "", st: v.status === "cancelada" ? "cancelado" : "pagada", total: v.total, items: v.items }; }))
+      .filter(function (x) { return inRange(x.created.slice(0, 10), orRange); });
+    var valid = all.filter(function (x) { return x.st !== "cancelado"; });
+    var total = valid.reduce(function (a, x) { return a + x.total; }, 0), units = valid.reduce(function (a, x) { return a + x.items.reduce(function (y, i) { return y + i.q; }, 0); }, 0);
+    var counter = valid.filter(function (x) { return x.kind === "m"; }), counterTotal = counter.reduce(function (a, x) { return a + x.total; }, 0);
     $("#orKpis").innerHTML = [
-      ["Ventas", money(total), valid.length + (valid.length === 1 ? " pedido" : " pedidos")],
-      ["Ticket promedio", valid.length ? money(total / valid.length) : "—", units + " piezas vendidas"],
-      ["Por atender", all.filter(function (o) { return o.status === "nuevo" || o.status === "listo"; }).length, "Nuevos o listos para entregar"],
-      ["Con envío", ship, valid.length ? Math.round(ship / valid.length * 100) + "% de los pedidos" : "—"]
+      ["Ventas", money(total), valid.length + (valid.length === 1 ? " venta" : " ventas") + " · " + units + " artículos"],
+      ["Ticket promedio", valid.length ? money(total / valid.length) : "—", "Mostrador y en línea"],
+      ["Mostrador", money(counterTotal), counter.length + (counter.length === 1 ? " venta" : " ventas")],
+      ["Pedidos por atender", all.filter(function (x) { return x.st === "nuevo" || x.st === "listo"; }).length, "En línea, nuevos o listos"]
     ].map(function (k) { return '<div class="kpi"><span class="label">' + k[0] + '</span><span class="value num">' + k[1] + '</span><span class="sub num">' + k[2] + '</span></div>'; }).join("");
-    var counts = {}; all.forEach(function (o) { counts[o.status] = (counts[o.status] || 0) + 1; });
-    $("#orStatusF").innerHTML = [["", "Todos (" + all.length + ")"]].concat(Object.keys(O_STATUS).map(function (k) { return [k, O_STATUS[k] + " (" + (counts[k] || 0) + ")"]; })).map(function (x) { return '<button type="button" class="chip" data-st="' + x[0] + '" aria-pressed="' + (x[0] === orStatus) + '">' + x[1] + '</button>'; }).join("");
-    var rows = all.filter(function (o) { return !orStatus || o.status === orStatus; }).sort(function (a, b) { return b.created.localeCompare(a.created); });
-    $("#orRows").innerHTML = rows.length ? rows.map(function (o) {
-      var items = o.items.map(function (i) { return i.q + "× " + esc(i.name || i.id); }).join("<br>");
-      return '<tr class="' + (o.status === "cancelado" ? "off" : "") + '"><td class="cell-main"><b class="num">' + esc(o.id) + '</b><span class="num">' + esc(shortDate(oDate(o))) + ' · ' + esc((o.created || "").slice(11, 16)) + '</span></td>' +
+    var inCh = all.filter(function (x) { return !orChannel || x.kind === orChannel; });
+    var counts = {}; inCh.forEach(function (x) { counts[x.st] = (counts[x.st] || 0) + 1; });
+    if (orStatus && !counts[orStatus]) orStatus = "";
+    $("#orStatusF").innerHTML = [["", "Todos (" + inCh.length + ")"]].concat(Object.keys(V_STATUS).filter(function (k) { return counts[k]; }).map(function (k) { return [k, V_STATUS[k] + " (" + counts[k] + ")"]; })).map(function (x) { return '<button type="button" class="chip" data-st="' + x[0] + '" aria-pressed="' + (x[0] === orStatus) + '">' + x[1] + '</button>'; }).join("");
+    var rows = inCh.filter(function (x) { return !orStatus || x.st === orStatus; }).sort(function (a, b) { return b.created.localeCompare(a.created); });
+    $("#orRows").innerHTML = rows.length ? rows.map(function (x) {
+      var o = x.rec, items = x.items.map(function (i) { return i.q + "× " + esc(i.name || i.id); }).join("<br>");
+      var head = '<tr class="' + (x.st === "cancelado" ? "off" : "") + '"><td class="cell-main"><b class="num">' + esc(x.id) + '</b><span class="num">' + esc(shortDate(x.created.slice(0, 10))) + ' · ' + esc(x.created.slice(11, 16)) + '</span></td>';
+      if (x.kind === "m") return head +
+        '<td class="cell-main"><b>' + esc(o.name || "Mostrador") + '</b><span>' + (o.staff ? "Atendió " + esc(o.staff) : "") + '</span></td><td style="font-size:13px">' + items + '</td>' +
+        '<td>Mostrador<br><span class="muted" style="font-size:13px">' + esc(METHODS[o.method] || o.method) + (o.discount ? " · desc. " + money(o.discount) : "") + '</span></td>' +
+        '<td class="r num"><b>' + money(o.total) + '</b></td><td>' + statusSelect("sstatus", o.id, o.status, S_STATUS) + '</td><td><button type="button" class="linkbtn" data-tickets="' + esc(o.id) + '">Ticket</button></td></tr>';
+      return head +
         '<td class="cell-main"><b>' + esc(o.name) + '</b><span class="num">' + esc(o.phone || "") + '</span></td><td style="font-size:13px">' + items + '</td>' +
-        '<td>' + (o.delivery === "envio" ? "Envío" + (o.address ? '<br><span class="muted" style="font-size:13px">' + esc(o.address) + '</span>' : "") : "Recoge en salón") + '</td>' +
+        '<td>En línea<br><span class="muted" style="font-size:13px">' + (o.delivery === "envio" ? "Envío" + (o.address ? " · " + esc(o.address) : "") : "Recoge en salón") + '</span></td>' +
         '<td class="r num"><b>' + money(o.total) + '</b></td><td>' + statusSelect("ostatus", o.id, o.status || "nuevo", O_STATUS) + '</td><td><button type="button" class="linkbtn" data-tickete="' + esc(o.id) + '">Ticket</button></td></tr>';
-    }).join("") : '<tr><td colspan="7" class="empty">No hay pedidos con estos filtros.</td></tr>';
+    }).join("") : '<tr><td colspan="7" class="empty">No hay ventas con estos filtros.</td></tr>';
   }
+  $("#orRows").addEventListener("change", function (e) {
+    var s = e.target.closest("[data-sstatus]"); if (!s) return;
+    setSaleStatus(s.dataset.sstatus, s.value); toast(s.value === "cancelada" ? "Venta cancelada; el inventario se regresó" : "Venta marcada como pagada"); render();
+  });
   $("#orRows").addEventListener("change", function (e) { var s = e.target.closest("[data-ostatus]"); if (!s) return; setOrderStatus(s.dataset.ostatus, s.value); toast("Pedido actualizado"); render(); });
 
   // ---------- Productos ----------
@@ -945,6 +1087,182 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     if (saveOr("bn_services", draftServices)) { $("#svcErr").textContent = ""; toast("Servicios guardados"); }
   });
 
+  // ---------- Venta de mostrador ----------
+  var METHODS = { efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia" };
+  var S_STATUS = { pagada: "Pagada", cancelada: "Cancelada" };
+  function newPos() { return { lines: [], name: "", staff: "", bookingId: null, discount: "", discType: "$", method: "efectivo", received: "", tab: "servicios", done: null }; }
+  var pos = newPos();
+
+  function trackedStock(id) { var p = BN.products().find(function (x) { return x.id === id; }); return p && p.stock != null && p.stock !== "" ? +p.stock : Infinity; }
+  function posTotals() {
+    var sub = pos.lines.reduce(function (a, l) { return a + l.q * l.price; }, 0), d = Math.max(0, +pos.discount || 0);
+    var disc = Math.round(pos.discType === "%" ? sub * Math.min(d, 100) / 100 : Math.min(d, sub));
+    return { sub: sub, disc: disc, total: sub - disc };
+  }
+  function addLine(item) {
+    var same = item.type !== "otro" && pos.lines.find(function (l) { return l.type === item.type && l.id === item.id; });
+    var want = (same ? same.q : 0) + 1;
+    if (item.type === "producto" && want > trackedStock(item.id)) { toast(trackedStock(item.id) ? "Solo hay " + trackedStock(item.id) + " en inventario" : "Producto agotado"); return; }
+    if (same) same.q = want; else pos.lines.push({ type: item.type, id: item.id, name: item.name, price: item.price, q: 1 });
+    renderPosCart();
+  }
+  function catalog() {
+    var q = $("#posSearch").value.trim().toLowerCase();
+    var list = pos.tab === "servicios"
+      ? BN.services().map(function (x) { return { type: "servicio", id: x.id, name: x.name, price: x.price, meta: x.min + " min" }; })
+      : BN.products().map(function (p) { var st = p.stock != null && p.stock !== "" ? +p.stock : null; return { type: "producto", id: p.id, name: p.name, price: p.price, img: BN.productImg(p), meta: st == null ? (p.cat || "") : st === 0 ? "Agotado" : st + " en inventario", out: st === 0 }; });
+    return list.filter(function (x) { return !q || x.name.toLowerCase().indexOf(q) >= 0; });
+  }
+  function renderCaja() {
+    document.querySelectorAll("#posTabs [data-tab]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.tab === pos.tab); });
+    renderPosGrid(); renderPosCart(); renderCashDay();
+  }
+  function renderPosGrid() {
+    var items = catalog();
+    $("#posGrid").innerHTML = items.length ? items.map(function (x, i) {
+      return '<button type="button" class="tile' + (x.img ? "" : " svc") + '" data-add="' + i + '"' + (x.out ? ' aria-disabled="true"' : "") + '>' + (x.img ? '<img src="' + x.img + '" alt="">' : "") +
+        '<b>' + esc(x.name) + '</b><span class="meta">' + esc(x.meta) + '</span><span class="price num">' + money(x.price) + '</span></button>';
+    }).join("") : '<p class="empty" style="grid-column:1/-1">Nada coincide con la búsqueda.</p>';
+    $("#posGrid").__items = items;
+  }
+  function renderPosCart() {
+    $("#posForm").hidden = !!pos.done; $("#posDone").hidden = !pos.done;
+    if (pos.done) return renderPosDone();
+    var staff = BN.staff();
+    $("#posStaff").innerHTML = '<option value="">Sin asignar</option>' + staff.concat(pos.staff && staff.indexOf(pos.staff) < 0 ? [pos.staff] : []).map(function (n) { return '<option' + (n === pos.staff ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("");
+    if ($("#posName") !== document.activeElement) $("#posName").value = pos.name;
+    var bk = pos.bookingId && BN.bookings().find(function (b) { return b.id === pos.bookingId; });
+    $("#posBooking").hidden = !bk;
+    if (bk) $("#posBooking").innerHTML = '<span>Cobrando la cita de <b>' + esc(bk.name) + '</b> · ' + esc(BN.niceDate(bk.date)) + ' ' + hm(bk.start) + '</span><button type="button" class="linkbtn" id="posUnlink">Quitar</button>';
+    $("#posLines").innerHTML = pos.lines.length ? pos.lines.map(function (l, i) {
+      return '<div class="pos-line"><div><div class="nm">' + esc(l.name) + '</div><div class="unit"><input type="number" min="0" step="1" value="' + l.price + '" data-price="' + i + '" aria-label="Precio de ' + esc(l.name) + '"> c/u</div></div>' +
+        '<div class="qty"><button type="button" data-dec="' + i + '" aria-label="Quitar uno">−</button><span class="num">' + l.q + '</span><button type="button" data-inc="' + i + '" aria-label="Agregar uno">+</button></div>' +
+        '<div class="amt num">' + money(l.q * l.price) + '</div></div>';
+    }).join("") : '<p class="empty">Toca un servicio o producto para agregarlo.</p>';
+    if ($("#posDisc") !== document.activeElement) $("#posDisc").value = pos.discount;
+    $("#posDiscType").value = pos.discType;
+    document.querySelectorAll("#posMethods [data-method]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.method === pos.method); });
+    renderPosTotals();
+  }
+  function renderPosTotals() {
+    var t = posTotals();
+    $("#posSub").textContent = money(t.sub);
+    $("#posTotal").textContent = money(t.total);
+    $("#posCash").hidden = pos.method !== "efectivo";
+    var quick = [t.total].concat([100, 200, 500, 1000].filter(function (v) { return v > t.total; }).slice(0, 3));
+    $("#posQuick").innerHTML = t.total > 0 ? quick.map(function (v, i) { return '<button type="button" class="chip num" data-recv="' + v + '">' + (i === 0 ? "Exacto " : "") + money(v) + '</button>'; }).join("") : "";
+    var rec = pos.received === "" ? null : +pos.received;
+    $("#posChange").hidden = rec == null || !t.total;
+    if (rec != null) $("#posChange").innerHTML = rec >= t.total ? '<span>Cambio</span><span class="num">' + money(rec - t.total) + '</span>' : '<span>Faltan</span><span class="num">' + money(t.total - rec) + '</span>';
+    $("#posChange").style.background = rec != null && rec < t.total ? "var(--warn-bg)" : ""; $("#posChange").style.color = rec != null && rec < t.total ? "var(--warn)" : "";
+    $("#posCharge").textContent = t.total > 0 || pos.lines.length ? "Cobrar " + money(t.total) : "Cobrar";
+    $("#posCharge").disabled = !pos.lines.length;
+    $("#posErr").hidden = true;
+  }
+  function renderPosDone() {
+    var v = pos.done;
+    $("#posDone").innerHTML = '<div class="done"><div class="ok-mark">✓</div><h2>Venta cobrada</h2>' +
+      '<p class="muted" style="margin:0"><b class="num">' + esc(v.id) + '</b> · ' + esc(METHODS[v.method]) + ' · <b class="num">' + money(v.total) + '</b></p>' +
+      (v.method === "efectivo" && v.change ? '<div class="change" style="min-width:220px"><span>Cambio</span><span class="num">' + money(v.change) + '</span></div>' : "") +
+      '<div class="row-actions" style="justify-content:center"><button type="button" class="btn btn-line" data-tickets="' + esc(v.id) + '">Imprimir ticket</button><button type="button" class="btn btn-primary" id="posNew">Nueva venta</button></div></div>';
+  }
+  function renderCashDay() {
+    var today = BN.sales().filter(function (v) { return v.status === "pagada" && v.created.slice(0, 10) === TODAY; });
+    var by = { efectivo: 0, tarjeta: 0, transferencia: 0 }, tot = 0;
+    today.forEach(function (v) { by[v.method] = (by[v.method] || 0) + v.total; tot += v.total; });
+    $("#cashCount").textContent = today.length + (today.length === 1 ? " venta" : " ventas");
+    $("#cashDay").innerHTML = [["Efectivo", by.efectivo], ["Tarjeta", by.tarjeta], ["Transferencia", by.transferencia], ["Total", tot]].map(function (x) { return '<div><span>' + x[0] + '</span><b class="num">' + money(x[1]) + '</b></div>'; }).join("");
+    return { sales: today, by: by, total: tot };
+  }
+
+  $("#posTabs").addEventListener("click", function (e) { var b = e.target.closest("[data-tab]"); if (!b) return; pos.tab = b.dataset.tab; $("#posSearch").value = ""; renderCaja(); });
+  $("#posSearch").addEventListener("input", renderPosGrid);
+  $("#posSearch").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return; e.preventDefault();
+    var first = catalog().find(function (x) { return !x.out; }); if (first) { addLine(first); this.select(); }
+  });
+  $("#posGrid").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-add]"); if (!b) return;
+    var x = $("#posGrid").__items[+b.dataset.add]; if (x.out) { toast("Producto agotado"); return; }
+    addLine(x);
+  });
+  $("#posCustom").addEventListener("submit", function (e) {
+    e.preventDefault(); var n = $("#posCustomName").value.trim(), p = $("#posCustomPrice").value;
+    if (!n || p === "") { toast("Escribe el concepto y su precio"); return; }
+    addLine({ type: "otro", id: "otro", name: n, price: Math.max(0, Math.round(+p)) }); $("#posCustomName").value = ""; $("#posCustomPrice").value = "";
+  });
+  $("#posLines").addEventListener("click", function (e) {
+    var inc = e.target.closest("[data-inc]"), dec = e.target.closest("[data-dec]");
+    if (inc) { var l = pos.lines[+inc.dataset.inc]; if (l.type === "producto" && l.q + 1 > trackedStock(l.id)) { toast("Solo hay " + trackedStock(l.id) + " en inventario"); return; } l.q++; }
+    else if (dec) { var d = pos.lines[+dec.dataset.dec]; d.q--; if (d.q <= 0) pos.lines.splice(+dec.dataset.dec, 1); }
+    else return;
+    renderPosCart();
+  });
+  $("#posLines").addEventListener("change", function (e) { var t = e.target.closest("[data-price]"); if (!t) return; pos.lines[+t.dataset.price].price = Math.max(0, Math.round(+t.value || 0)); renderPosCart(); });
+  $("#posName").addEventListener("input", function () { pos.name = this.value; });
+  $("#posStaff").addEventListener("change", function () { pos.staff = this.value; });
+  $("#posDisc").addEventListener("input", function () { pos.discount = this.value; renderPosTotals(); });
+  $("#posDiscType").addEventListener("change", function () { pos.discType = this.value; renderPosTotals(); });
+  $("#posMethods").addEventListener("click", function (e) { var b = e.target.closest("[data-method]"); if (!b) return; pos.method = b.dataset.method; renderPosCart(); });
+  $("#posReceived").addEventListener("input", function () { pos.received = this.value; renderPosTotals(); });
+  $("#posQuick").addEventListener("click", function (e) { var b = e.target.closest("[data-recv]"); if (!b) return; pos.received = b.dataset.recv; $("#posReceived").value = pos.received; renderPosTotals(); });
+  $("#posClear").addEventListener("click", function () { var tab = pos.tab; pos = newPos(); pos.tab = tab; $("#posReceived").value = ""; renderCaja(); });
+  $("#posForm").addEventListener("click", function (e) { if (e.target.closest("#posUnlink")) { pos.bookingId = null; renderPosCart(); } });
+  $("#posDone").addEventListener("click", function (e) { if (e.target.closest("#posNew")) { var tab = pos.tab; pos = newPos(); pos.tab = tab; $("#posReceived").value = ""; renderCaja(); $("#posSearch").focus(); } });
+  function posError(m) { $("#posErr").textContent = m; $("#posErr").hidden = false; }
+
+  function nextSaleId(sales) {
+    var max = 0; sales.forEach(function (v) { var m = /^M-(\d{4,})$/.exec(v.id); if (m && !v.demo) max = Math.max(max, +m[1]); });
+    return "M-" + String(max + 1).padStart(4, "0");
+  }
+  $("#posCharge").addEventListener("click", function () {
+    if (!pos.lines.length) return posError("Agrega al menos un servicio o producto.");
+    var t = posTotals(), rec = pos.method === "efectivo" ? (pos.received === "" ? t.total : +pos.received) : null;
+    if (rec != null && rec < t.total) return posError("El efectivo recibido no alcanza: faltan " + money(t.total - rec) + ".");
+    var products = BN.products(), short = null;
+    pos.lines.forEach(function (l) {
+      if (l.type !== "producto") return;
+      var p = products.find(function (x) { return x.id === l.id; });
+      if (p && p.stock != null && p.stock !== "" && l.q > +p.stock) short = p.name + " (quedan " + p.stock + ")";
+    });
+    if (short) return posError("No alcanza el inventario: " + short + ".");
+    var sales = BN.sales();
+    var sale = { id: nextSaleId(sales), created: BN.stamp(), name: pos.name.trim(), staff: pos.staff, items: pos.lines.map(function (l) { return { type: l.type, id: l.id, name: l.name, q: l.q, price: l.price }; }),
+      subtotal: t.sub, discount: t.disc, total: t.total, method: pos.method, received: rec, change: rec != null ? rec - t.total : null, status: "pagada", bookingId: pos.bookingId || null };
+    sales.push(sale);
+    if (!saveOr("bn_sales", sales)) return posError("No se pudo guardar la venta: el navegador no tiene espacio.");
+    adjustStock(sale.items, -1);
+    if (pos.bookingId) { var all = BN.bookings(); all.forEach(function (b) { if (b.id === pos.bookingId) { b.status = "completada"; b.saleId = sale.id; } }); saveOr("bn_bookings", all); }
+    pos.done = sale; renderCaja(); toast("Venta " + sale.id + " cobrada");
+  });
+  function adjustStock(items, dir) {
+    var products = BN.products(), changed = false;
+    items.forEach(function (i) { if (i.type !== "producto") return; products.forEach(function (p) { if (p.id === i.id && p.stock != null && p.stock !== "") { p.stock = Math.max(0, +p.stock + dir * i.q); changed = true; } }); });
+    if (changed) saveOr("bn_products", products);
+  }
+  function setSaleStatus(id, st) {
+    var sales = BN.sales(), v = sales.find(function (x) { return x.id === id; }); if (!v || v.status === st) return;
+    adjustStock(v.items, st === "cancelada" ? 1 : -1);
+    v.status = st; saveOr("bn_sales", sales);
+  }
+  function chargeBooking(id) {
+    var b = BN.bookings().find(function (x) { return x.id === id; }); if (!b) return;
+    if (isPaid(b)) { toast("Esta cita ya está cobrada"); return; }
+    pos = newPos(); pos.tab = "productos";
+    pos.lines = [{ type: "servicio", id: b.service, name: svcName(b), price: bPrice(b), q: 1 }];
+    pos.name = b.name; pos.staff = b.staff; pos.bookingId = b.id;
+    $("#posReceived").value = "";
+    closeDrawer(); go("caja");
+  }
+  $("#cashTicket").addEventListener("click", function () {
+    var c = renderCashDay(), cfg = Ticket.config();
+    var lines = [{ t: cfg.name || "BeatyNails", a: "c", big: true, b: true }, { t: "CORTE DE CAJA", a: "c", b: true }, { lr: ["Fecha", BN.niceDate(TODAY)] }, { lr: ["Hora", BN.stamp().slice(11, 16)] }, { hr: true },
+      { lr: ["Ventas", String(c.sales.length)] }, { lr: ["Efectivo", money(c.by.efectivo)] }, { lr: ["Tarjeta", money(c.by.tarjeta)] }, { lr: ["Transferencia", money(c.by.transferencia)] }, { hr: true },
+      { lr: ["TOTAL", money(c.total)], b: true, big: true }, { hr: true }];
+    c.sales.forEach(function (v) { lines.push({ lr: [v.id + " " + v.created.slice(11, 16) + " " + (METHODS[v.method] || "").slice(0, 4), money(v.total)] }); });
+    openTicket("Corte de caja", lines);
+  });
+
   // ---------- Tickets ----------
   var MODE_LABEL = { bluetooth: "Imprimir por Bluetooth", ip: "Imprimir en red", navegador: "Imprimir" };
   var ticketLines = null;
@@ -1019,7 +1337,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   // ---------- Inicio ----------
   $("#todayLbl").textContent = "Hoy: " + BN.niceDate(TODAY);
   var start = (location.hash || "").slice(1);
-  go(["resumen", "citas", "ventas", "productos", "horario", "impresora"].indexOf(start) >= 0 ? start : "resumen");
+  go(["resumen", "caja", "citas", "ventas", "productos", "horario", "impresora"].indexOf(start) >= 0 ? start : "resumen");
 })();
 </script>
 </body>

@@ -75,6 +75,28 @@
     return L.concat(footer(cfg));
   }
 
+  var METHOD = { efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia" };
+  function saleLines(v, cfg) {
+    var L = header(cfg);
+    L.push({ t: "VENTA " + v.id, a: "c", b: true });
+    L.push({ lr: ["Fecha", fmtStamp(v.created || BN.stamp())] });
+    if (v.name) L.push({ lr: ["Clienta", v.name] });
+    if (v.staff) L.push({ lr: ["Atendió", v.staff] });
+    L.push({ hr: true });
+    v.items.forEach(function (i) {
+      L.push({ t: i.name });
+      L.push({ lr: ["  " + i.q + " x " + BN.money(i.price), BN.money(i.q * i.price)] });
+    });
+    L.push({ hr: true });
+    L.push({ lr: ["Subtotal", BN.money(v.subtotal)] });
+    if (v.discount) L.push({ lr: ["Descuento", "-" + BN.money(v.discount)] });
+    L.push({ lr: ["TOTAL", BN.money(v.total)], b: true, big: true });
+    L.push({ lr: ["Pago", METHOD[v.method] || v.method] });
+    if (v.method === "efectivo" && v.received != null) { L.push({ lr: ["Recibido", BN.money(v.received)] }); L.push({ lr: ["Cambio", BN.money(v.change || 0)] }); }
+    if (v.status === "cancelada") L.push({ t: "VENTA CANCELADA", a: "c", b: true });
+    return L.concat(footer(cfg));
+  }
+
   function testLines(cfg) {
     var L = header(cfg);
     L.push({ t: "PRUEBA DE IMPRESIÓN", a: "c", b: true });
@@ -217,7 +239,7 @@
 
   window.Ticket = {
     DEFAULT: DEFAULT_PRINTER, config: config, cols: cols,
-    order: orderLines, booking: bookingLines, test: testLines,
+    order: orderLines, booking: bookingLines, sale: saleLines, test: testLines,
     toText: toText, layout: layout, escpos: escpos, print: print,
     bt: { supported: btSupported, connect: btConnect, name: btName }
   };
