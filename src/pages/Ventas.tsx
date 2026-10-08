@@ -42,7 +42,7 @@ export default function Ventas() {
       partidas: (v.venta_items || []).map((i) => ({ cantidad: i.cantidad, nombre: i.nombre, importe: Number(i.importe), producto: i.tipo === 'producto' })),
       descuento: Number(v.descuento), propina: Number(v.propina), total: Number(v.total), enLinea: Number(v.pagado_en_linea || 0),
       metodo: v.metodo_pago, anulada: v.estado === 'anulada',
-      }, anchoGuardado());
+      }, anchoGuardado(), negocio.id);
     } catch (e) { setError(mensajeError(e)); }
   }
 

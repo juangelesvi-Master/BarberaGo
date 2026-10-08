@@ -1,5 +1,6 @@
 import qrcode from 'qrcode-generator';
 import { dinero } from './formato';
+import { supabase } from './supabase';
 
 /** Ancho del papel de la impresora térmica (se recuerda en este dispositivo). */
 export type AnchoTicket = '58' | '80';
@@ -225,11 +226,14 @@ function base64(bytes: Uint8Array) {
   return btoa(s);
 }
 
-/** Manda bytes ESC/POS a la impresora: desde la app de Android (red o Bluetooth) o, en el navegador, por el puente (red). */
-export async function imprimirEnImpresora(bytes: Uint8Array, r: Impresora) {
+/**
+ * Manda bytes ESC/POS a la impresora: desde la app de Android (red o Bluetooth) o, en el navegador, a la impresora
+ * de red por el puente de impresión (con negocioId usa la cola en la nube, que sirve desde cualquier dispositivo).
+ */
+export async function imprimirEnImpresora(bytes: Uint8Array, r: Impresora, negocioId?: string) {
   const n = nativo();
   if (!n) {
-    if (r.tipo === 'red') return imprimirPorPuente(bytes, r);
+    if (r.tipo === 'red') return imprimirRedWeb(bytes, r, negocioId);
     throw new Error('Las impresoras Bluetooth solo funcionan en la app BarberaGo para Android');
   }
   let error: string;
@@ -240,20 +244,68 @@ export async function imprimirEnImpresora(bytes: Uint8Array, r: Impresora) {
   if (error) throw new Error(error);
 }
 
-// ───────────── Puente de impresión (puente-impresora/, programa para la computadora) ─────────────
-// El navegador no puede abrir conexiones TCP; el puente escucha en esta misma computadora y
-// reenvía el ticket a la impresora de red.
+// ───────────── Puente de impresión (puente-impresora/, programa para una computadora de la barbería) ─────────────
+// Como en RestoraGo: el navegador no puede llegar a las IP de la red local, así que los tickets van a una cola en la
+// nube (cola_impresion) y el puente los toma e imprime. El puente también acepta tickets del navegador de su misma
+// computadora en 127.0.0.1:9123 (sirve aunque no esté vinculado a la barbería).
 const PUENTE = 'http://127.0.0.1:9123';
 export const DESCARGA_PUENTE = '/descargas/BarberaGoPuente.exe';
-const SIN_PUENTE = 'No encontramos el puente de impresión en esta computadora. Ábrelo (BarberaGoPuente) y vuelve a intentar.';
+const SIN_PUENTE = 'Falta el puente de impresión: instálalo en una computadora de la barbería (Impresora → Red (IP)).';
 
-/** Versión del puente si está abierto en esta computadora, o null. */
-export async function estadoPuente(): Promise<string | null> {
+export type EstadoPuenteNube = { configurado: boolean; activo: boolean; equipo?: string | null };
+
+/** Estado del puente de la barbería en la nube (encendido si se reportó en los últimos 20 s). */
+export async function estadoPuenteNube(negocioId: string): Promise<EstadoPuenteNube | null> {
+  const { data, error } = await supabase.rpc('puente_estado', { p_negocio: negocioId });
+  return error ? null : (data as EstadoPuenteNube);
+}
+
+/** Crea el código del puente (solo administradores). Reemplaza al anterior. */
+export async function crearCodigoPuente(negocioId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('puente_crear', { p_negocio: negocioId });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
+/** Puente abierto en ESTA computadora: versión y si ya está vinculado, o null. */
+export async function estadoPuente(): Promise<{ version: string; vinculado: boolean } | null> {
   try {
     const r = await fetch(`${PUENTE}/estado`, { signal: AbortSignal.timeout(2000) });
     const d = await r.json();
-    return d?.ok ? String(d.version) : null;
+    return d?.ok ? { version: String(d.version), vinculado: !!d.vinculado } : null;
   } catch { return null; }
+}
+
+/** Vincula el puente abierto en esta computadora con la barbería (le pasa el código). */
+export async function vincularPuenteLocal(codigo: string) {
+  const r = await fetch(`${PUENTE}/vincular`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }), signal: AbortSignal.timeout(4000),
+  });
+  if (!r.ok) throw new Error('No se pudo vincular el puente');
+}
+
+async function imprimirRedWeb(bytes: Uint8Array, r: ImpresoraRed, negocioId?: string) {
+  const nube = negocioId ? await estadoPuenteNube(negocioId) : null;
+  if (negocioId && nube?.activo) return imprimirPorCola(bytes, r, negocioId);
+  if (await estadoPuente()) return imprimirPorPuente(bytes, r);
+  throw new Error(nube?.configurado
+    ? `El puente de impresión está apagado. Ábrelo en la computadora de la barbería${nube.equipo ? ` (${nube.equipo})` : ''}.`
+    : SIN_PUENTE);
+}
+
+/** Deja el ticket en la cola de la nube y espera a que el puente diga si salió. */
+async function imprimirPorCola(bytes: Uint8Array, r: ImpresoraRed, negocioId: string) {
+  const { data, error } = await supabase.from('cola_impresion')
+    .insert({ negocio_id: negocioId, ip: r.ip, puerto: r.puerto, datos: base64(bytes) }).select('id').single();
+  if (error) throw new Error('No se pudo mandar el ticket al puente: ' + error.message);
+  const limite = Date.now() + 15000;
+  while (Date.now() < limite) {
+    await new Promise((ok) => setTimeout(ok, 800));
+    const { data: t } = await supabase.from('cola_impresion').select('estado, error').eq('id', data.id).single();
+    if (t?.estado === 'impreso') return;
+    if (t?.estado === 'error') throw new Error(t.error || 'No se pudo imprimir');
+  }
+  throw new Error('El puente no respondió. Si vuelve en los próximos minutos, imprimirá el ticket.');
 }
 
 async function imprimirPorPuente(bytes: Uint8Array, r: ImpresoraRed) {
@@ -281,18 +333,18 @@ export function ticketPrueba(): DatosTicket {
  * Imprime el ticket:
  *  - en la app de Android con impresora guardada → directo por IP o Bluetooth (ESC/POS);
  *  - en la app de Android sin impresora → diálogo de impresión de Android;
- *  - en el navegador con impresora de red guardada → por el puente de impresión de la computadora;
+ *  - en el navegador con impresora de red guardada → por el puente de impresión (cola en la nube o local);
  *  - en el navegador sin impresora → ventana de impresión del navegador.
  * Lanza el error si la impresora no respondió.
  */
-export async function imprimirTicket(d: DatosTicket, ancho: AnchoTicket) {
+export async function imprimirTicket(d: DatosTicket, ancho: AnchoTicket, negocioId?: string) {
   const n = nativo();
   const imp = impresoraGuardada();
   if (n) {
     if (imp) return imprimirEnImpresora(escposTicket(d, ancho), imp);
     return n.imprimirHtml(htmlTicket(d, ancho), `Ticket ${d.folio}`);
   }
-  if (imp?.tipo === 'red') return imprimirPorPuente(escposTicket(d, ancho), imp);
+  if (imp?.tipo === 'red') return imprimirRedWeb(escposTicket(d, ancho), imp, negocioId);
   imprimirNavegador(d, ancho);
 }
 

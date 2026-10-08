@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Aviso, Campo, Modal } from './ui';
+import { useNegocio } from '../lib/sesion';
 import {
-  anchoGuardado, appConBluetooth, DESCARGA_PUENTE, enAppAndroid, estadoPuente, escposTicket, guardarAncho, guardarImpresora, imprimirEnImpresora,
+  anchoGuardado, appConBluetooth, crearCodigoPuente, DESCARGA_PUENTE, enAppAndroid, estadoPuente, estadoPuenteNube, escposTicket,
+  vincularPuenteLocal, type EstadoPuenteNube, guardarAncho, guardarImpresora, imprimirEnImpresora,
   imprimirTicket, impresoraGuardada, listarBluetooth, ticketPrueba, type AnchoTicket, type Impresora,
 } from '../lib/ticket';
 
@@ -21,10 +23,35 @@ export default function ImpresoraTickets({ onCerrar }: { onCerrar: () => void })
   const conBt = appConBluetooth();
   const [ancho, setAncho] = useState<AnchoTicket>(anchoGuardado);
   const [conexion, setConexion] = useState<Conexion>(guardada?.tipo === 'bluetooth' && !app ? 'android' : guardada?.tipo || 'android');
-  // Estado del puente de impresión (solo en el navegador): undefined = revisando, null = no está abierto.
-  const [puente, setPuente] = useState<string | null | undefined>(undefined);
-  const revisarPuente = () => { setPuente(undefined); estadoPuente().then(setPuente); };
-  useEffect(() => { if (!app && conexion === 'red') revisarPuente(); }, [app, conexion]);
+  const { negocio, miembro } = useNegocio();
+  const esAdmin = miembro.rol === 'admin';
+  // Puente de impresión (solo en el navegador): el de la barbería en la nube y el de esta computadora.
+  const [nube, setNube] = useState<EstadoPuenteNube | null | undefined>(undefined);
+  const [local, setLocal] = useState<{ version: string; vinculado: boolean } | null>(null);
+  const [codigo, setCodigo] = useState('');
+  const verPuente = !app && conexion === 'red';
+  useEffect(() => {
+    if (!verPuente) return;
+    let vivo = true;
+    const revisar = () => Promise.all([estadoPuenteNube(negocio.id), estadoPuente()]).then(([n, l]) => { if (vivo) { setNube(n); setLocal(l); } });
+    revisar();
+    const t = setInterval(revisar, 3000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [verPuente, negocio.id]);
+
+  async function instalarPuente() {
+    setError(''); setOk('');
+    if (nube?.configurado && !confirm('Se creará un código nuevo y el puente actual dejará de funcionar hasta que le pongas el nuevo. ¿Continuar?')) return;
+    try {
+      const c = await crearCodigoPuente(negocio.id);
+      if (local) {
+        await vincularPuenteLocal(c);
+        setCodigo('');
+        setOk('Listo: esta computadora quedó como puente de impresión de la barbería.');
+      } else setCodigo(c);
+      setNube(await estadoPuenteNube(negocio.id));
+    } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+  }
   const [ip, setIp] = useState(guardada?.tipo === 'red' ? guardada.ip : '');
   const [puerto, setPuerto] = useState(guardada?.tipo === 'red' ? guardada.puerto : 9100);
   const [bt, setBt] = useState(guardada?.tipo === 'bluetooth' ? { mac: guardada.mac, nombre: guardada.nombre } : null);
@@ -61,8 +88,8 @@ export default function ImpresoraTickets({ onCerrar }: { onCerrar: () => void })
     setError(''); setOk('');
     try {
       const imp = elegida();
-      if (imp) await imprimirEnImpresora(escposTicket(ticketPrueba(), ancho), imp);
-      else await imprimirTicket(ticketPrueba(), ancho);
+      if (imp) await imprimirEnImpresora(escposTicket(ticketPrueba(), ancho), imp, negocio.id);
+      else await imprimirTicket(ticketPrueba(), ancho, negocio.id);
       setOk('Ticket de prueba enviado.');
     } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
   }
@@ -141,25 +168,42 @@ export default function ImpresoraTickets({ onCerrar }: { onCerrar: () => void })
                   <Campo etiqueta="IP de la impresora"><input value={ip} onChange={(e) => setIp(e.target.value)} placeholder="192.168.1.100" inputMode="decimal" autoComplete="off" /></Campo>
                   <Campo etiqueta="Puerto"><input type="number" min={1} max={65535} value={puerto} onChange={(e) => setPuerto(Number(e.target.value) || 9100)} /></Campo>
                 </div>
-                <div className={`puente ${puente ? 'puente-ok' : ''}`}>
-                  {puente === undefined ? <span className="tenue pequeno">Buscando el puente de impresión…</span> : puente ? (
-                    <span className="pequeno">✓ Puente de impresión conectado (versión {puente})</span>
+                <div className={`puente ${nube?.activo ? 'puente-ok' : ''}`}>
+                  {nube === undefined ? <span className="tenue pequeno">Revisando el puente de impresión…</span> : nube?.activo ? (
+                    <span className="pequeno">✓ Puente encendido{nube.equipo && ` en ${nube.equipo}`}. Cualquier celular, tablet o computadora de la barbería imprime por él.</span>
                   ) : (
                     <>
-                      <p className="pequeno"><b>Falta el puente de impresión.</b> El navegador no puede hablar directo con la impresora; este programita de Windows lo hace por él.</p>
-                      <ol className="pequeno">
-                        <li>Descárgalo en la computadora de la caja y ábrelo. Si Windows avisa, toca “Más información” y “Ejecutar de todas formas”.</li>
-                        <li>Deja abierta su ventana (puedes minimizarla).</li>
-                        <li>Si el navegador pregunta por acceso a dispositivos de la red local, toca Permitir.</li>
-                      </ol>
+                      <p className="pequeno">
+                        {nube?.configurado
+                          ? <><b>El puente está apagado.</b> Ábrelo en la computadora de la barbería{nube.equipo && ` (${nube.equipo})`} para que salgan los tickets.</>
+                          : <><b>Falta el puente de impresión.</b> Ningún navegador puede hablar directo con una impresora de red; un programa en una computadora de la barbería (con Windows y en la misma red) imprime por todos los dispositivos, como en RestoraGo.</>}
+                      </p>
+                      {!nube?.configurado && (esAdmin ? (
+                        <ol className="pequeno">
+                          <li>En la computadora de la barbería descarga el puente y ábrelo. Si Windows avisa, toca “Más información” y “Ejecutar de todas formas”.</li>
+                          <li>Toca “Instalar puente” (si lo haces en esa misma computadora se conecta solo; si no, pega el código en la ventana del puente).</li>
+                          <li>Deja abierta la ventana del puente (puedes minimizarla).</li>
+                        </ol>
+                      ) : <p className="tenue pequeno">Pide al administrador de la barbería que lo instale.</p>)}
+                      {local && !nube?.configurado && <p className="tenue pequeno">Mientras tanto, esta computadora ya puede imprimir con su puente.</p>}
                       <div className="acciones-fila">
                         <a className="btn btn-chico" href={DESCARGA_PUENTE} download="BarberaGoPuente.exe">Descargar puente para Windows</a>
-                        <button type="button" className="btn btn-chico" onClick={revisarPuente}>Revisar otra vez</button>
+                        {esAdmin && !nube?.configurado && <button type="button" className="btn btn-chico btn-primario" onClick={instalarPuente}>Instalar puente</button>}
                       </div>
                     </>
                   )}
+                  {codigo && (
+                    <div className="codigo-puente">
+                      <p className="pequeno">Pega este código en la ventana del puente (se muestra una sola vez):</p>
+                      <code>{codigo}</code>
+                      <button type="button" className="btn btn-chico" onClick={() => navigator.clipboard?.writeText(codigo).then(() => setOk('Código copiado.'))}>Copiar código</button>
+                    </div>
+                  )}
+                  {esAdmin && nube?.configurado && (
+                    <button type="button" className="btn-texto pequeno" onClick={instalarPuente}>{local && !local.vinculado ? 'Usar esta computadora como puente' : 'Cambiar el código del puente'}</button>
+                  )}
                 </div>
-                <p className="tenue pequeno">En tablets y celulares Android usa la app BarberaGo, que imprime directo sin puente.</p>
+                <p className="tenue pequeno">En tablets y celulares Android también puedes usar la app BarberaGo, que imprime directo sin puente.</p>
               </>
             )}
           </>
