@@ -562,3 +562,10 @@ hr.separador { border: 0; border-top: 1px solid var(--borde); margin: 1.25rem 0;
 .insumos input.cant { width: 70px; }
 fieldset.campo { border: 0; padding: 0; margin: 0; }
 .btn-descargar { white-space: normal; letter-spacing: .04em; min-width: 0; display: flex; align-items: center; justify-content: center; gap: .5rem; margin-top: .25rem; border-color: var(--oro); color: var(--oro); text-decoration: none; }
+
+/* Puente de impresión (impresora de red desde el navegador) */
+.puente { border: 1px solid var(--borde, rgba(255,255,255,.12)); border-radius: 10px; padding: .7rem .85rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; min-width: 0; }
+.puente .acciones-fila { display: flex; flex-wrap: wrap; gap: .5rem; }
+.puente.puente-ok { border-color: var(--oro); color: var(--oro); }
+.puente p, .puente ol { margin: 0; }
+.puente ol { padding-left: 1.2rem; display: grid; gap: .25rem; }

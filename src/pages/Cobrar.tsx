@@ -114,10 +114,10 @@ export default function Cobrar() {
     }
   }
 
-  function imprimir(t: Ticket) {
+  async function imprimir(t: Ticket) {
     setErrorImpresion('');
     try {
-      imprimirTicket({
+      await imprimirTicket({
       negocio: negocio.nombre, direccion: negocio.direccion, telefono: negocio.telefono, moneda: negocio.moneda, qr: negocio.reserva_online ? ligaReservas(negocio.slug) : undefined,
       folio: t.folio, fecha: t.fecha, cliente: t.cliente, barbero: barberos.find((b) => b.id === t.barberoId)?.nombre,
       partidas: t.partidas.map((p) => ({ cantidad: p.cantidad, nombre: p.nombre, importe: p.precio * p.cantidad, producto: p.tipo === 'producto' })),

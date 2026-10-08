@@ -33,10 +33,10 @@ export default function Ventas() {
     cargar();
   }
 
-  function reimprimir(v: Venta) {
+  async function reimprimir(v: Venta) {
     setError('');
     try {
-      imprimirTicket({
+      await imprimirTicket({
       negocio: negocio.nombre, direccion: negocio.direccion, telefono: negocio.telefono, moneda: negocio.moneda, qr: negocio.reserva_online ? ligaReservas(negocio.slug) : undefined,
       folio: v.folio, fecha: new Date(v.fecha), cliente: v.clientes?.nombre, barbero: barberos.find((b) => b.id === v.barbero_id)?.nombre,
       partidas: (v.venta_items || []).map((i) => ({ cantidad: i.cantidad, nombre: i.nombre, importe: Number(i.importe), producto: i.tipo === 'producto' })),

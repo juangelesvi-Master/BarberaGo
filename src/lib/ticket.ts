@@ -225,16 +225,47 @@ function base64(bytes: Uint8Array) {
   return btoa(s);
 }
 
-/** Manda bytes ESC/POS a la impresora (red o Bluetooth) desde la app de Android. Lanza el error si no se pudo. */
-export function imprimirEnImpresora(bytes: Uint8Array, r: Impresora) {
+/** Manda bytes ESC/POS a la impresora: desde la app de Android (red o Bluetooth) o, en el navegador, por el puente (red). */
+export async function imprimirEnImpresora(bytes: Uint8Array, r: Impresora) {
   const n = nativo();
-  if (!n) throw new Error('La impresión directa solo funciona en la app BarberaGo para Android');
+  if (!n) {
+    if (r.tipo === 'red') return imprimirPorPuente(bytes, r);
+    throw new Error('Las impresoras Bluetooth solo funcionan en la app BarberaGo para Android');
+  }
   let error: string;
   if (r.tipo === 'bluetooth') {
     if (!n.imprimirBluetooth) throw new Error('Actualiza la app BarberaGo para Android para usar impresoras Bluetooth');
     error = n.imprimirBluetooth(r.mac, base64(bytes));
   } else error = n.imprimirRed(r.ip, r.puerto, base64(bytes));
   if (error) throw new Error(error);
+}
+
+// ───────────── Puente de impresión (puente-impresora/, programa para la computadora) ─────────────
+// El navegador no puede abrir conexiones TCP; el puente escucha en esta misma computadora y
+// reenvía el ticket a la impresora de red.
+const PUENTE = 'http://127.0.0.1:9123';
+export const DESCARGA_PUENTE = '/descargas/BarberaGoPuente.exe';
+const SIN_PUENTE = 'No encontramos el puente de impresión en esta computadora. Ábrelo (BarberaGoPuente) y vuelve a intentar.';
+
+/** Versión del puente si está abierto en esta computadora, o null. */
+export async function estadoPuente(): Promise<string | null> {
+  try {
+    const r = await fetch(`${PUENTE}/estado`, { signal: AbortSignal.timeout(2000) });
+    const d = await r.json();
+    return d?.ok ? String(d.version) : null;
+  } catch { return null; }
+}
+
+async function imprimirPorPuente(bytes: Uint8Array, r: ImpresoraRed) {
+  let resp: Response;
+  try {
+    resp = await fetch(`${PUENTE}/imprimir`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip: r.ip, puerto: r.puerto, datos: base64(bytes) }), signal: AbortSignal.timeout(15000),
+    });
+  } catch { throw new Error(SIN_PUENTE); }
+  const d = await resp.json().catch(() => null);
+  if (!resp.ok || !d?.ok) throw new Error(d?.error || 'No se pudo imprimir');
 }
 
 /** Ticket de prueba para revisar la conexión y el ancho del papel. */
@@ -250,16 +281,18 @@ export function ticketPrueba(): DatosTicket {
  * Imprime el ticket:
  *  - en la app de Android con impresora guardada → directo por IP o Bluetooth (ESC/POS);
  *  - en la app de Android sin impresora → diálogo de impresión de Android;
- *  - en el navegador → ventana de impresión del navegador.
+ *  - en el navegador con impresora de red guardada → por el puente de impresión de la computadora;
+ *  - en el navegador sin impresora → ventana de impresión del navegador.
  * Lanza el error si la impresora no respondió.
  */
-export function imprimirTicket(d: DatosTicket, ancho: AnchoTicket) {
+export async function imprimirTicket(d: DatosTicket, ancho: AnchoTicket) {
   const n = nativo();
+  const imp = impresoraGuardada();
   if (n) {
-    const imp = impresoraGuardada();
     if (imp) return imprimirEnImpresora(escposTicket(d, ancho), imp);
     return n.imprimirHtml(htmlTicket(d, ancho), `Ticket ${d.folio}`);
   }
+  if (imp?.tipo === 'red') return imprimirPorPuente(escposTicket(d, ancho), imp);
   imprimirNavegador(d, ancho);
 }
 

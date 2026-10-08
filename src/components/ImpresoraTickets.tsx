@@ -1,13 +1,17 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Aviso, Campo, Modal } from './ui';
 import {
-  anchoGuardado, appConBluetooth, enAppAndroid, escposTicket, guardarAncho, guardarImpresora, imprimirEnImpresora,
+  anchoGuardado, appConBluetooth, DESCARGA_PUENTE, enAppAndroid, estadoPuente, escposTicket, guardarAncho, guardarImpresora, imprimirEnImpresora,
   imprimirTicket, impresoraGuardada, listarBluetooth, ticketPrueba, type AnchoTicket, type Impresora,
 } from '../lib/ticket';
 
 type Conexion = 'android' | 'red' | 'bluetooth';
 const CONEXIONES: { valor: Conexion; texto: string }[] = [
   { valor: 'android', texto: 'Android' }, { valor: 'red', texto: 'Red (IP)' }, { valor: 'bluetooth', texto: 'Bluetooth' },
+];
+// En el navegador: ventana de impresión del sistema, o impresora de red por el puente.
+const CONEXIONES_WEB: { valor: Conexion; texto: string }[] = [
+  { valor: 'android', texto: 'Navegador' }, { valor: 'red', texto: 'Red (IP)' },
 ];
 
 /** Configuración de la impresora de tickets de ESTE dispositivo (se guarda en el dispositivo, no en la cuenta). */
@@ -16,7 +20,11 @@ export default function ImpresoraTickets({ onCerrar }: { onCerrar: () => void })
   const app = enAppAndroid();
   const conBt = appConBluetooth();
   const [ancho, setAncho] = useState<AnchoTicket>(anchoGuardado);
-  const [conexion, setConexion] = useState<Conexion>(guardada?.tipo || 'android');
+  const [conexion, setConexion] = useState<Conexion>(guardada?.tipo === 'bluetooth' && !app ? 'android' : guardada?.tipo || 'android');
+  // Estado del puente de impresión (solo en el navegador): undefined = revisando, null = no está abierto.
+  const [puente, setPuente] = useState<string | null | undefined>(undefined);
+  const revisarPuente = () => { setPuente(undefined); estadoPuente().then(setPuente); };
+  useEffect(() => { if (!app && conexion === 'red') revisarPuente(); }, [app, conexion]);
   const [ip, setIp] = useState(guardada?.tipo === 'red' ? guardada.ip : '');
   const [puerto, setPuerto] = useState(guardada?.tipo === 'red' ? guardada.puerto : 9100);
   const [bt, setBt] = useState(guardada?.tipo === 'bluetooth' ? { mac: guardada.mac, nombre: guardada.nombre } : null);
@@ -49,12 +57,12 @@ export default function ImpresoraTickets({ onCerrar }: { onCerrar: () => void })
     } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
   }
 
-  function probar() {
+  async function probar() {
     setError(''); setOk('');
     try {
       const imp = elegida();
-      if (app && imp) imprimirEnImpresora(escposTicket(ticketPrueba(), ancho), imp);
-      else imprimirTicket(ticketPrueba(), ancho);
+      if (imp) await imprimirEnImpresora(escposTicket(ticketPrueba(), ancho), imp);
+      else await imprimirTicket(ticketPrueba(), ancho);
       setOk('Ticket de prueba enviado.');
     } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
   }
@@ -112,10 +120,49 @@ export default function ImpresoraTickets({ onCerrar }: { onCerrar: () => void })
             ))}
           </>
         ) : (
-          <p className="tenue pequeno">
-            En el navegador el ticket sale por la ventana de impresión del sistema. Para imprimir directo a una impresora térmica de red o Bluetooth usa la app BarberaGo para Android.
-            En iPhone o iPad la impresora necesita AirPrint.
-          </p>
+          <>
+            <div className="campo">
+              <span>Conexión</span>
+              <div className="segmentado" role="radiogroup" aria-label="Conexión">
+                {CONEXIONES_WEB.map((c) => (
+                  <button type="button" key={c.valor} role="radio" aria-checked={conexion === c.valor} className={conexion === c.valor ? 'activo' : ''}
+                    onClick={() => { setConexion(c.valor); setError(''); setOk(''); }}>{c.texto}</button>
+                ))}
+              </div>
+            </div>
+            {conexion === 'android' ? (
+              <p className="tenue pequeno">
+                El ticket sale por la ventana de impresión del sistema. En iPhone o iPad la impresora necesita AirPrint.
+              </p>
+            ) : (
+              <>
+                <p className="tenue pequeno">Impresora térmica conectada a la red (Wi-Fi o cable). Su IP sale en la hoja de configuración que imprime al encenderla manteniendo el botón FEED.</p>
+                <div className="fila-campos">
+                  <Campo etiqueta="IP de la impresora"><input value={ip} onChange={(e) => setIp(e.target.value)} placeholder="192.168.1.100" inputMode="decimal" autoComplete="off" /></Campo>
+                  <Campo etiqueta="Puerto"><input type="number" min={1} max={65535} value={puerto} onChange={(e) => setPuerto(Number(e.target.value) || 9100)} /></Campo>
+                </div>
+                <div className={`puente ${puente ? 'puente-ok' : ''}`}>
+                  {puente === undefined ? <span className="tenue pequeno">Buscando el puente de impresión…</span> : puente ? (
+                    <span className="pequeno">✓ Puente de impresión conectado (versión {puente})</span>
+                  ) : (
+                    <>
+                      <p className="pequeno"><b>Falta el puente de impresión.</b> El navegador no puede hablar directo con la impresora; este programita de Windows lo hace por él.</p>
+                      <ol className="pequeno">
+                        <li>Descárgalo en la computadora de la caja y ábrelo. Si Windows avisa, toca “Más información” y “Ejecutar de todas formas”.</li>
+                        <li>Deja abierta su ventana (puedes minimizarla).</li>
+                        <li>Si el navegador pregunta por acceso a dispositivos de la red local, toca Permitir.</li>
+                      </ol>
+                      <div className="acciones-fila">
+                        <a className="btn btn-chico" href={DESCARGA_PUENTE} download="BarberaGoPuente.exe">Descargar puente para Windows</a>
+                        <button type="button" className="btn btn-chico" onClick={revisarPuente}>Revisar otra vez</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <p className="tenue pequeno">En tablets y celulares Android usa la app BarberaGo, que imprime directo sin puente.</p>
+              </>
+            )}
+          </>
         )}
         <Aviso>{error}</Aviso>
         <Aviso tipo="ok">{ok}</Aviso>
