@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Sitio que abre la app. Se cambia al compilar: gradle assembleRelease -PsitioUrl=https://cansuites.com
+def sitioUrl = (project.findProperty('sitioUrl') ?: 'https://cansuites.restorago.com').toString()
+
+android {
+    namespace 'com.cansuites.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.cansuites.app'
+        minSdk 24
+        targetSdk 34
+        versionCode((project.findProperty('versionCode') ?: '1').toString().toInteger())
+        versionName((project.findProperty('versionName') ?: '1.0').toString())
+        buildConfigField 'String', 'SITIO_URL', "\"${sitioUrl}\""
+    }
+
+    buildFeatures { buildConfig true }
+
+    signingConfigs {
+        release {
+            // El flujo de GitHub crea o recibe la llave y pasa su ubicación por variables de entorno.
+            def llave = System.getenv('CANSUITES_KEYSTORE')
+            if (llave) {
+                storeFile file(llave)
+                storePassword System.getenv('CANSUITES_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('CANSUITES_KEY_ALIAS') ?: 'cansuites'
+                keyPassword System.getenv('CANSUITES_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig System.getenv('CANSUITES_KEYSTORE') ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

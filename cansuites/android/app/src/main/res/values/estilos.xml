@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="naranja">#F26B1D</color>
+    <color name="blanco">#FFFFFF</color>
+    <style name="Tema" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/naranja</item>
+        <item name="android:colorAccent">@color/naranja</item>
+        <item name="android:statusBarColor">@color/naranja</item>
+        <item name="android:navigationBarColor">@color/blanco</item>
+        <item name="android:windowBackground">@color/blanco</item>
+    </style>
+</resources>
