@@ -204,6 +204,27 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
 .err { background: var(--bad-bg); color: var(--bad); border-radius: 9px; padding: 9px 12px; font-size: 14px; }
 .hint { font-size: 13px; color: var(--muted); margin: 0; }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 14px; z-index: 60; }
+/* Ticket */
+.paper { background: #fffdf8; color: #1c1c1c; font: 12px/1.35 "Courier New", ui-monospace, monospace; padding: 16px 14px 22px; border-radius: 4px; box-shadow: 0 1px 0 var(--line), 0 6px 18px rgb(0 0 0 / .12); white-space: pre; overflow-x: auto; justify-self: center; max-width: 100%; }
+.paper .b { font-weight: 700; }
+.paper .big { font-weight: 700; font-size: 2em; line-height: 1.15; }
+.print-modes { display: grid; gap: 8px; }
+.print-modes label { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; }
+.print-modes label:has(input:checked) { border-color: var(--lacquer); background: var(--blush); }
+.print-modes input { margin-top: 3px; }
+.print-modes b { font-weight: 700; }
+.print-modes span { grid-column: 2; font-size: 13px; color: var(--muted); }
+.conn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.conn::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.conn.on { color: var(--ok); } .conn.on::before { background: var(--ok); }
+#printArea { display: none; }
+@media print {
+  @page { margin: 0; }
+  body > *:not(#printArea) { display: none !important; }
+  #printArea { display: block; width: var(--paper, 48mm); font: 9pt/1.3 "Courier New", monospace; color: #000; white-space: pre; }
+  #printArea .b { font-weight: 700; }
+  #printArea .big { font-weight: 700; font-size: 2em; line-height: 1.15; }
+}
 .demo-note { background: var(--blush); border-radius: var(--r); padding: 10px 14px; font-size: 14px; margin-bottom: 18px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
 </style>
 </head>
@@ -217,6 +238,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       <button type="button" data-go="ventas">Ventas <span class="badge num" id="bdgVentas" hidden></span></button>
       <button type="button" data-go="productos">Productos</button>
       <button type="button" data-go="horario">Horario y servicios</button>
+      <button type="button" data-go="impresora">Impresora</button>
     </nav>
     <div class="foot">
       <a href="index.html">Ver la página →</a>
@@ -302,7 +324,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       </div>
       <div class="table-wrap">
         <table class="t">
-          <thead><tr><th>Pedido</th><th>Cliente</th><th>Artículos</th><th>Entrega</th><th class="r">Total</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Pedido</th><th>Cliente</th><th>Artículos</th><th>Entrega</th><th class="r">Total</th><th>Estado</th><th></th></tr></thead>
           <tbody id="orRows"></tbody>
         </table>
       </div>
@@ -373,6 +395,56 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
         </div>
       </div>
     </section>
+    <!-- IMPRESORA -->
+    <section data-view="impresora" hidden>
+      <div class="page-head">
+        <div><h1>Impresora de tickets</h1><p>Imprime tickets de citas y pedidos en una impresora térmica de 58 u 80 mm.</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="stack">
+          <div class="card">
+            <h2>Cómo está conectada</h2>
+            <div class="print-modes" id="prModes">
+              <label><input type="radio" name="prMode" value="bluetooth"><b>Bluetooth</b><span>Desde Chrome o Edge en Android, Windows o Mac. En iPhone no funciona.</span></label>
+              <label><input type="radio" name="prMode" value="ip"><b>Red (IP)</b><span>Impresora conectada al módem por cable o wifi. Necesita el puente de impresión abierto en una computadora del salón.</span></label>
+              <label><input type="radio" name="prMode" value="navegador"><b>Impresora del equipo</b><span>Usa el diálogo de impresión del navegador con cualquier impresora ya instalada (USB, Bluetooth o red).</span></label>
+            </div>
+            <div id="prBt" class="row-actions">
+              <button type="button" class="btn btn-line" id="btConnect">Buscar impresora Bluetooth</button>
+              <span class="conn" id="btState">Sin conectar</span>
+            </div>
+            <div id="prIp" style="display:grid;gap:12px;margin-top:14px">
+              <div class="two">
+                <label class="f" for="prIpAddr">IP de la impresora<input id="prIpAddr" placeholder="192.168.1.50" inputmode="decimal"></label>
+                <label class="f" for="prPort">Puerto<input id="prPort" type="number" min="1" max="65535"></label>
+              </div>
+              <label class="f" for="prBridge">Dirección del puente<input id="prBridge" placeholder="http://localhost:9123"></label>
+              <p class="hint">El puente es el archivo <b>impresora/puente-impresora.js</b>. Se abre con <b>node puente-impresora.js</b> en la computadora del salón y se deja abierto.</p>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Datos del ticket</h2>
+            <div style="display:grid;gap:12px">
+              <label class="f" for="prWidth">Ancho del papel<select id="prWidth"><option value="58">58 mm (32 letras por renglón)</option><option value="80">80 mm (48 letras por renglón)</option></select></label>
+              <label class="f" for="prName">Nombre del salón<input id="prName"></label>
+              <label class="f" for="prAddr">Dirección<input id="prAddr"></label>
+              <label class="f" for="prPhone">Teléfono<input id="prPhone"></label>
+              <label class="f" for="prFooter">Mensaje al pie<textarea id="prFooter" rows="2"></textarea></label>
+              <label style="display:flex;gap:10px;align-items:center;font-weight:600"><input id="prCut" type="checkbox"> Cortar el papel al terminar</label>
+            </div>
+            <div class="row-actions">
+              <button type="button" class="btn btn-primary" id="prSave">Guardar</button>
+              <button type="button" class="btn btn-line" id="prTest">Imprimir prueba</button>
+              <span class="hint" id="prMsg"></span>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="display:grid;align-content:start;gap:12px">
+          <h2>Vista previa <span class="muted">así sale el ticket</span></h2>
+          <div class="paper" id="prPreview"></div>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -383,8 +455,10 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   <footer id="drFoot"></footer>
 </aside>
 <div class="toast" id="toast" hidden role="status"></div>
+<div id="printArea" aria-hidden="true"></div>
 
 <script src="datos.js"></script>
+<script src="ticket.js"></script>
 <script>
 (function () {
   BN.seed();
@@ -436,7 +510,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     $("#bdgCitas").hidden = !todayPending; $("#bdgCitas").textContent = todayPending;
     $("#bdgVentas").hidden = !newOrders; $("#bdgVentas").textContent = newOrders;
     $("#demoNote").hidden = !bookings.some(function (b) { return b.demo; }) && !orders.some(function (o) { return o.demo; });
-    ({ resumen: renderResumen, citas: renderCitas, ventas: renderVentas, productos: renderProductos, horario: renderHorario })[current]();
+    ({ resumen: renderResumen, citas: renderCitas, ventas: renderVentas, productos: renderProductos, horario: renderHorario, impresora: renderImpresora })[current]();
   }
   // Si la página está abierta en otra pestaña, refleja reservas y pedidos nuevos
   window.addEventListener("storage", function () { if (!$("#drawer").hidden) return; render(); });
@@ -474,14 +548,14 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     $("#agendaCount").textContent = today.length ? today.length + (today.length === 1 ? " cita" : " citas") : "";
     $("#agenda").innerHTML = today.length ? today.map(function (b) {
       return '<li><span class="time num">' + hm(b.start) + '</span><span class="who"><b>' + esc(b.name) + '</b><span>' + esc(svcName(b)) + ' · ' + esc(b.staff) + '</span></span><span class="acts">' +
-        (b.status === "confirmada" ? '<button type="button" class="linkbtn" data-quick="' + b.id + '" data-st="completada">Atendida</button><button type="button" class="linkbtn danger" data-quick="' + b.id + '" data-st="no-asistio">No vino</button>' : pill(b.status, B_STATUS)) + '</span></li>';
+        (b.status === "confirmada" ? '<button type="button" class="linkbtn" data-quick="' + b.id + '" data-st="completada">Atendida</button><button type="button" class="linkbtn danger" data-quick="' + b.id + '" data-st="no-asistio">No vino</button>' : pill(b.status, B_STATUS) + (b.status === "completada" ? '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button>' : "")) + '</span></li>';
     }).join("") : '<li class="empty" style="display:block">No hay citas para hoy.</li>';
 
     // Pedidos por atender
     var pend = orders.filter(function (o) { return o.status === "nuevo" || o.status === "listo"; }).sort(function (a, b) { return a.created.localeCompare(b.created); });
     $("#pendOrders").innerHTML = pend.length ? pend.slice(0, 6).map(function (o) {
       var next = o.status === "nuevo" ? ["listo", "Marcar listo"] : ["entregado", "Entregado"];
-      return '<li><span class="time num" style="font-size:13px">' + esc(o.id) + '</span><span class="who"><b>' + esc(o.name) + '</b><span class="num">' + money(o.total) + ' · ' + (o.delivery === "envio" ? "Envío" : "Recoge en salón") + '</span></span><span class="acts"><button type="button" class="linkbtn" data-oquick="' + esc(o.id) + '" data-st="' + next[0] + '">' + next[1] + '</button></span></li>';
+      return '<li><span class="time num" style="font-size:13px">' + esc(o.id) + '</span><span class="who"><b>' + esc(o.name) + '</b><span class="num">' + money(o.total) + ' · ' + (o.delivery === "envio" ? "Envío" : "Recoge en salón") + '</span></span><span class="acts"><button type="button" class="linkbtn" data-tickete="' + esc(o.id) + '">Ticket</button><button type="button" class="linkbtn" data-oquick="' + esc(o.id) + '" data-st="' + next[0] + '">' + next[1] + '</button></span></li>';
     }).join("") + (pend.length > 6 ? '<li style="display:block"><button type="button" class="linkbtn" data-goto="ventas">Ver los ' + pend.length + ' pedidos</button></li>' : "") : '<li class="empty" style="display:block">Todo entregado.</li>';
 
     // Más vendidos (30 días)
@@ -548,6 +622,8 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     var q = e.target.closest("[data-quick]"); if (q) { setBookingStatus(q.dataset.quick, q.dataset.st); toast("Cita marcada como " + B_STATUS[q.dataset.st].toLowerCase()); render(); return; }
     var o = e.target.closest("[data-oquick]"); if (o) { setOrderStatus(o.dataset.oquick, o.dataset.st); toast("Pedido " + o.dataset.oquick + ": " + O_STATUS[o.dataset.st].toLowerCase()); render(); return; }
     var g = e.target.closest("[data-goto]"); if (g) { go(g.dataset.goto); return; }
+    var tb = e.target.closest("[data-ticketb]"); if (tb) { var bk = BN.bookings().find(function (x) { return x.id === tb.dataset.ticketb; }); if (bk) openTicket("Ticket de cita", Ticket.booking(bk, svcName(bk), bPrice(bk), Ticket.config())); return; }
+    var te = e.target.closest("[data-tickete]"); if (te) { var od = BN.orders().find(function (x) { return x.id === te.dataset.tickete; }); if (od) openTicket("Ticket " + od.id, Ticket.order(od, Ticket.config())); return; }
     var ep = e.target.closest("[data-editp]"); if (ep) { openProduct(ep.dataset.editp); return; }
     var ts = e.target.closest("[data-two-step]");
     if (ts && ts.dataset.twoStep === "clearDemo" && twoStep(ts, "¿Borrar? Toca otra vez")) { BN.clearDemo(); toast("Datos de ejemplo borrados"); render(); }
@@ -586,7 +662,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
         '<td class="cell-main"><b>' + esc(b.name) + '</b><span class="num">' + esc(b.phone || "") + (b.notes ? " · " + esc(b.notes) : "") + '</span></td>' +
         '<td>' + esc(svcName(b)) + '</td><td>' + esc(b.staff) + '</td><td class="r num">' + money(bPrice(b)) + '</td>' +
         '<td>' + statusSelect("bstatus", b.id, b.status || "confirmada", B_STATUS) + '</td>' +
-        '<td><div class="actions"><button type="button" class="linkbtn" data-editb="' + esc(b.id) + '">Cambiar</button><button type="button" class="linkbtn danger" data-delb="' + esc(b.id) + '">Eliminar</button></div></td></tr>';
+        '<td><div class="actions"><button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button><button type="button" class="linkbtn" data-editb="' + esc(b.id) + '">Cambiar</button><button type="button" class="linkbtn danger" data-delb="' + esc(b.id) + '">Eliminar</button></div></td></tr>';
     });
     $("#bkRows").innerHTML = html || '<tr><td colspan="7" class="empty">No hay citas con estos filtros.</td></tr>';
   }
@@ -613,7 +689,11 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   $("#scrim").addEventListener("click", closeDrawer);
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("#drawer").hidden) closeDrawer(); });
   $("#drBody").addEventListener("submit", function (e) { e.preventDefault(); if (onSave) onSave(); });
-  $("#drFoot").addEventListener("click", function (e) { if (e.target.closest("[data-save]") && onSave) onSave(); if (e.target.closest("[data-cancel]")) closeDrawer(); });
+  $("#drFoot").addEventListener("click", function (e) {
+    if (e.target.closest("[data-save]") && onSave) onSave();
+    if (e.target.closest("[data-cancel]")) closeDrawer();
+    var pb = e.target.closest("[data-print]"); if (pb && ticketLines) doPrint(ticketLines, pb.dataset.print || null, pb);
+  });
   function showErr(msg) { var el = $("#drErr"); el.textContent = msg; el.hidden = !msg; }
   var FOOT = '<button type="button" class="btn btn-line" data-cancel>Cancelar</button><button type="button" class="btn btn-primary" data-save>Guardar</button>';
 
@@ -688,8 +768,8 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       return '<tr class="' + (o.status === "cancelado" ? "off" : "") + '"><td class="cell-main"><b class="num">' + esc(o.id) + '</b><span class="num">' + esc(shortDate(oDate(o))) + ' · ' + esc((o.created || "").slice(11, 16)) + '</span></td>' +
         '<td class="cell-main"><b>' + esc(o.name) + '</b><span class="num">' + esc(o.phone || "") + '</span></td><td style="font-size:13px">' + items + '</td>' +
         '<td>' + (o.delivery === "envio" ? "Envío" + (o.address ? '<br><span class="muted" style="font-size:13px">' + esc(o.address) + '</span>' : "") : "Recoge en salón") + '</td>' +
-        '<td class="r num"><b>' + money(o.total) + '</b></td><td>' + statusSelect("ostatus", o.id, o.status || "nuevo", O_STATUS) + '</td></tr>';
-    }).join("") : '<tr><td colspan="6" class="empty">No hay pedidos con estos filtros.</td></tr>';
+        '<td class="r num"><b>' + money(o.total) + '</b></td><td>' + statusSelect("ostatus", o.id, o.status || "nuevo", O_STATUS) + '</td><td><button type="button" class="linkbtn" data-tickete="' + esc(o.id) + '">Ticket</button></td></tr>';
+    }).join("") : '<tr><td colspan="7" class="empty">No hay pedidos con estos filtros.</td></tr>';
   }
   $("#orRows").addEventListener("change", function (e) { var s = e.target.closest("[data-ostatus]"); if (!s) return; setOrderStatus(s.dataset.ostatus, s.value); toast("Pedido actualizado"); render(); });
 
@@ -865,10 +945,81 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     if (saveOr("bn_services", draftServices)) { $("#svcErr").textContent = ""; toast("Servicios guardados"); }
   });
 
+  // ---------- Tickets ----------
+  var MODE_LABEL = { bluetooth: "Imprimir por Bluetooth", ip: "Imprimir en red", navegador: "Imprimir" };
+  var ticketLines = null;
+  function paperHtml(lines, cfg) {
+    return Ticket.layout(lines, cfg || Ticket.config()).map(function (r) { return '<div class="' + (r.b ? "b " : "") + (r.big ? "big" : "") + '">' + (esc(r.s) || "&nbsp;") + "</div>"; }).join("");
+  }
+  function openTicket(title, lines) {
+    var cfg = Ticket.config(); ticketLines = lines;
+    openDrawer(title, '<div class="err" id="drErr" hidden></div><div class="paper">' + paperHtml(lines) + '</div>' +
+      '<p class="hint">Impresora: ' + (cfg.mode === "bluetooth" ? "Bluetooth" + (Ticket.bt.name() ? " (" + esc(Ticket.bt.name()) + ")" : "") : cfg.mode === "ip" ? "red, " + esc(cfg.ip || "sin IP") : "la del equipo") + ', papel de ' + cfg.width + ' mm. <button type="button" class="linkbtn" data-goto="impresora">Cambiar</button></p>',
+      '<button type="button" class="btn btn-line" data-print="navegador"' + (cfg.mode === "navegador" ? " hidden" : "") + '>Usar impresora del equipo</button><button type="button" class="btn btn-primary" data-print="">' + MODE_LABEL[cfg.mode] + '</button>',
+      null);
+    $("#drBody").querySelector("[data-goto]").addEventListener("click", closeDrawer);
+  }
+  function doPrint(lines, how, btn, msgEl) {
+    if (btn) { btn.disabled = true; btn.dataset.text = btn.textContent; btn.textContent = "Imprimiendo…"; }
+    return Ticket.print(lines, how).then(function () {
+      if ((how || Ticket.config().mode) !== "navegador") toast("Ticket enviado a la impresora");
+      updateBtState();
+    }, function (err) {
+      var m = err && err.name === "NotFoundError" ? "No elegiste ninguna impresora." : (err && err.message) || "No se pudo imprimir.";
+      if (msgEl) msgEl.textContent = m; else if ($("#drErr")) showErr(m); else toast(m);
+    }).then(function () { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.text; } });
+  }
+
+  function readPrinterForm() {
+    var c = Ticket.config(), m = document.querySelector('input[name="prMode"]:checked');
+    c.mode = m ? m.value : c.mode; c.width = +$("#prWidth").value; c.ip = $("#prIpAddr").value.trim(); c.port = +$("#prPort").value || 9100;
+    c.bridge = $("#prBridge").value.trim() || Ticket.DEFAULT.bridge; c.name = $("#prName").value.trim(); c.address = $("#prAddr").value.trim();
+    c.phone = $("#prPhone").value.trim(); c.footer = $("#prFooter").value; c.cut = $("#prCut").checked;
+    return c;
+  }
+  function updateBtState() {
+    var n = Ticket.bt.name(), el = $("#btState"); if (!el) return;
+    el.textContent = !Ticket.bt.supported() ? "Este navegador no tiene Bluetooth" : n ? "Conectada: " + n : "Sin conectar";
+    el.classList.toggle("on", !!n);
+    $("#btConnect").textContent = n ? "Cambiar de impresora" : "Buscar impresora Bluetooth";
+  }
+  function syncPrinterUi() {
+    var c = readPrinterForm();
+    $("#prBt").hidden = c.mode !== "bluetooth"; $("#prIp").hidden = c.mode !== "ip";
+    $("#prPreview").innerHTML = paperHtml(Ticket.test(c), c);
+    $("#prTest").textContent = c.mode === "navegador" ? "Imprimir prueba" : MODE_LABEL[c.mode].replace("Imprimir", "Imprimir prueba");
+  }
+  function renderImpresora() {
+    var c = Ticket.config();
+    document.querySelectorAll('input[name="prMode"]').forEach(function (r) { r.checked = r.value === c.mode; });
+    $("#prWidth").value = String(c.width); $("#prIpAddr").value = c.ip; $("#prPort").value = c.port; $("#prBridge").value = c.bridge;
+    $("#prName").value = c.name; $("#prAddr").value = c.address; $("#prPhone").value = c.phone; $("#prFooter").value = c.footer; $("#prCut").checked = !!c.cut;
+    $("#prMsg").textContent = "";
+    updateBtState(); syncPrinterUi();
+  }
+  // La vista previa usa lo que está en pantalla aunque no se haya guardado
+  ["input", "change"].forEach(function (ev) { document.querySelector('[data-view="impresora"]').addEventListener(ev, syncPrinterUi); });
+  $("#prSave").addEventListener("click", function () {
+    var c = readPrinterForm();
+    if (c.mode === "ip" && c.ip && !/^\d{1,3}(\.\d{1,3}){3}$/.test(c.ip)) { $("#prMsg").textContent = "La IP debe verse como 192.168.1.50."; return; }
+    if (saveOr("bn_printer", c)) { $("#prMsg").textContent = ""; toast("Impresora guardada"); }
+  });
+  $("#prTest").addEventListener("click", function () {
+    var c = readPrinterForm(); saveOr("bn_printer", c); $("#prMsg").textContent = "";
+    doPrint(Ticket.test(c), null, this, $("#prMsg"));
+  });
+  $("#btConnect").addEventListener("click", function () {
+    var btn = this; $("#prMsg").textContent = "";
+    Ticket.bt.connect(true).then(function () { toast("Impresora conectada"); updateBtState(); }, function (err) {
+      $("#prMsg").textContent = err && err.name === "NotFoundError" ? "No elegiste ninguna impresora." : (err && err.message) || "No se pudo conectar.";
+      updateBtState();
+    });
+  });
+
   // ---------- Inicio ----------
   $("#todayLbl").textContent = "Hoy: " + BN.niceDate(TODAY);
   var start = (location.hash || "").slice(1);
-  go(["resumen", "citas", "ventas", "productos", "horario"].indexOf(start) >= 0 ? start : "resumen");
+  go(["resumen", "citas", "ventas", "productos", "horario", "impresora"].indexOf(start) >= 0 ? start : "resumen");
 })();
 </script>
 </body>

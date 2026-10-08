@@ -7,6 +7,8 @@ hosting estático (Hostinger, Netlify, Vercel).
 - `index.html`: la página para clientas.
 - `admin.html`: el panel del salón (enlace "Panel del salón" al pie de la página).
 - `datos.js`: datos y funciones que comparten las dos páginas.
+- `ticket.js`: tickets para impresora térmica (lo usa el panel).
+- `impresora/puente-impresora.js`: puente para imprimir en impresoras de red (IP).
 
 ## Qué incluye
 
@@ -28,6 +30,30 @@ hosting estático (Hostinger, Netlify, Vercel).
   marca "Agotado" y descuenta piezas en cada pedido.
 - **Horario y servicios:** horario por día, cada cuánto hay cita, manicuristas, servicios y precios,
   y costo de envío. Los cambios se ven al momento en la página.
+
+- **Impresora:** tickets de citas y pedidos (botón "Ticket") en impresoras térmicas de 58 u 80 mm,
+  con vista previa, prueba de impresión, nombre, dirección y mensaje al pie.
+
+## Imprimir tickets
+
+En el panel, sección **Impresora**, elige cómo está conectada:
+
+- **Bluetooth:** abre el panel en Chrome o Edge (Android, Windows o Mac), toca "Buscar impresora
+  Bluetooth" y elige la impresora. Funciona con impresoras térmicas Bluetooth LE que usan ESC/POS
+  (la mayoría de las portátiles de 58 mm). En iPhone no funciona porque Safari no tiene Bluetooth web.
+- **Red (IP):** el navegador no puede hablar directo con el puerto 9100 de la impresora, así que hace
+  falta el puente. En una computadora del salón conectada a la misma red, instala Node.js y corre:
+
+  ```bash
+  node impresora/puente-impresora.js
+  ```
+
+  Deja la ventana abierta. En el panel escribe la IP de la impresora (por ejemplo `192.168.1.50`) y
+  el puerto (normalmente `9100`). El panel debe abrirse en esa misma computadora.
+- **Impresora del equipo:** usa el diálogo de impresión del navegador con cualquier impresora ya
+  instalada en Windows, Mac o Android.
+
+Usa "Imprimir prueba" para revisar que salgan bien los acentos y la ñ (página de códigos 850).
 
 El panel arranca con citas y pedidos de ejemplo para que se vea lleno; se borran con el botón
 "Borrar datos de ejemplo".
