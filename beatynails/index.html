@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BeatyNails</title>
+<meta name="description" content="BeatyNails: salón de uñas. Reserva tu cita en línea y compra esmaltes, aceites y kits en nuestra tienda.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: barra superior fija, portada de dos columnas, luego secciones apiladas
+   (servicios, reserva, tienda, contacto) en una columna de hasta 1120px. */
+:root {
+  --bg: #fbf6f7;
+  --surface: #ffffff;
+  --ink: #2a1520;
+  --muted: #7a6470;
+  --line: #ecdfe4;
+  --lacquer: #8c1d40;       /* rojo laca, el acento */
+  --lacquer-ink: #ffffff;
+  --blush: #f6dbe3;
+  --chrome: #c9bcc4;
+  --ok: #1e7a4c;
+  --display: "Gloock", "Didot", "Bodoni 72", Georgia, serif;
+  --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --r: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #170d12; --surface: #22141b; --ink: #f7e9ee; --muted: #b8a0ab; --line: #3a2530;
+    --lacquer: #e0577f; --lacquer-ink: #1a0b11; --blush: #3b1d29; --chrome: #5b4651; --ok: #5fcf95;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #170d12; --surface: #22141b; --ink: #f7e9ee; --muted: #b8a0ab; --line: #3a2530;
+  --lacquer: #e0577f; --lacquer-ink: #1a0b11; --blush: #3b1d29; --chrome: #5b4651; --ok: #5fcf95;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); }
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--lacquer); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; line-height: 1.08; text-wrap: balance; margin: 0; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; }
+.eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--lacquer); font-weight: 700; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Barra superior */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 16px; min-height: 64px; }
+.logo { font-family: var(--display); font-size: 26px; text-decoration: none; letter-spacing: -.01em; }
+.logo span { color: var(--lacquer); }
+.nav { display: flex; gap: 22px; margin-left: auto; }
+.nav a { text-decoration: none; font-weight: 500; font-size: 15px; color: var(--muted); }
+.nav a:hover { color: var(--ink); }
+.cart-btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.cart-btn b { background: var(--lacquer); color: var(--lacquer-ink); border-radius: 999px; min-width: 22px; padding: 0 6px; font-size: 12px; line-height: 22px; text-align: center; }
+@media (max-width: 720px) { .nav { display: none; } .cart-btn { margin-left: auto; } }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px; padding: 13px 22px; font-weight: 600; cursor: pointer; text-decoration: none; }
+.btn-primary { background: var(--lacquer); color: var(--lacquer-ink); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; border: 1px solid var(--ink); color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Portada */
+.hero { padding-block: 56px 40px; }
+.hero .wrap { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; }
+.hero h1 { font-size: clamp(44px, 7vw, 84px); letter-spacing: -.02em; }
+.hero h1 em { font-style: normal; color: var(--lacquer); }
+.hero p { font-size: 18px; max-width: 46ch; color: var(--muted); margin: 18px 0 26px; }
+.hero .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.facts { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 34px; font-size: 14px; color: var(--muted); }
+.facts strong { display: block; font-family: var(--display); font-size: 28px; color: var(--ink); font-weight: 400; }
+.swatches { position: relative; aspect-ratio: 1 / 1; max-width: 100%; border-radius: 28px; background: var(--blush); overflow: hidden; }
+.swatches svg { width: 100%; height: 100%; display: block; }
+@media (max-width: 820px) { .hero .wrap { grid-template-columns: 1fr; } .swatches { max-width: 420px; } }
+
+section.block { padding-block: 64px; border-top: 1px solid var(--line); }
+.head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+.head h2 { font-size: clamp(34px, 4.5vw, 52px); margin-top: 6px; }
+.head p { max-width: 48ch; margin: 0; color: var(--muted); }
+
+/* Servicios: carta de precios */
+.menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; }
+.svc { display: grid; grid-template-columns: 1fr auto; gap: 2px 16px; padding: 18px 0; border-bottom: 1px dashed var(--line); }
+.svc h3 { font-family: var(--body); font-weight: 600; font-size: 18px; }
+.svc .price { font-family: var(--display); font-size: 22px; }
+.svc p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 14px; }
+.svc .dur { font-size: 13px; color: var(--muted); }
+.svc button { grid-column: 1 / -1; justify-self: start; margin-top: 6px; background: none; border: 0; padding: 0; color: var(--lacquer); font-weight: 600; cursor: pointer; font-size: 14px; }
+@media (max-width: 720px) { .menu { grid-template-columns: 1fr; } }
+
+/* Reserva */
+.booking { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); gap: 28px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; }
+.step { display: grid; gap: 10px; padding-block: 0 22px; }
+.step + .step { border-top: 1px solid var(--line); padding-top: 20px; }
+.step-title { font-weight: 700; font-size: 15px; display: flex; gap: 10px; align-items: center; }
+.step-title i { font-style: normal; width: 24px; height: 24px; border-radius: 50%; background: var(--blush); color: var(--lacquer); display: grid; place-items: center; font-size: 13px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+label.f { display: grid; gap: 6px; font-size: 14px; font-weight: 500; }
+input, select, textarea { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 11px 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 8px 14px; cursor: pointer; font-size: 14px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip:disabled { text-decoration: line-through; opacity: .4; cursor: not-allowed; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.slots .chip { text-align: center; padding: 8px 4px; }
+.summary dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 14px 0 18px; font-size: 15px; }
+.summary dt { color: var(--muted); }
+.summary dd { margin: 0; text-align: right; font-weight: 600; }
+.summary .total { border-top: 1px solid var(--line); padding-top: 12px; display: flex; justify-content: space-between; font-family: var(--display); font-size: 26px; }
+.note { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+.msg { border-radius: 10px; padding: 12px 14px; font-size: 14px; margin-top: 14px; background: var(--blush); }
+.msg.ok { background: color-mix(in srgb, var(--ok) 14%, var(--surface)); color: var(--ink); }
+.mine { margin-top: 18px; }
+.mine h3 { font-family: var(--body); font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.mine ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.mine li { display: flex; justify-content: space-between; gap: 10px; align-items: center; font-size: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.linkbtn { background: none; border: 0; color: var(--lacquer); cursor: pointer; font-weight: 600; font-size: 13px; padding: 0; }
+@media (max-width: 860px) { .booking { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* Tienda */
+.filters { margin-bottom: 22px; }
+.products { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 22px; }
+.prod { display: grid; grid-template-rows: auto 1fr; gap: 12px; }
+.prod .ph { aspect-ratio: 4 / 5; max-width: 100%; border-radius: var(--r); overflow: hidden; background: var(--blush); position: relative; }
+.prod .ph img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.prod:hover .ph img { transform: scale(1.04); }
+.tag { position: absolute; top: 10px; left: 10px; background: var(--surface); color: var(--ink); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; }
+.prod .info { display: grid; gap: 4px; align-content: start; }
+.prod h3 { font-family: var(--body); font-size: 16px; font-weight: 600; }
+.prod p { margin: 0; font-size: 14px; color: var(--muted); }
+.prod .row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }
+.prod .price { font-family: var(--display); font-size: 22px; }
+.add { border: 1px solid var(--ink); background: transparent; border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
+.add:hover { background: var(--ink); color: var(--bg); }
+
+/* Carrito */
+.scrim { position: fixed; inset: 0; background: rgb(20 8 14 / .45); z-index: 40; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 100%); background: var(--surface); z-index: 41; display: grid; grid-template-rows: auto 1fr auto; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: -20px 0 50px rgb(0 0 0 / .18); }
+.drawer header, .drawer footer { padding: 18px 20px; border-bottom: 1px solid var(--line); }
+.drawer footer { border-bottom: 0; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+.drawer header { display: flex; justify-content: space-between; align-items: center; }
+.drawer h2 { font-size: 28px; }
+.x { background: none; border: 0; font-size: 26px; line-height: 1; cursor: pointer; color: var(--muted); }
+.lines { overflow-y: auto; padding: 8px 20px; }
+.line { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.line img { width: 64px; height: 80px; object-fit: cover; border-radius: 8px; }
+.line .t { font-weight: 600; font-size: 14px; }
+.qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; margin-top: 6px; }
+.qty button { background: none; border: 0; width: 28px; height: 28px; cursor: pointer; font-size: 16px; }
+.qty span { min-width: 22px; text-align: center; font-size: 14px; }
+.empty { text-align: center; color: var(--muted); padding: 40px 10px; }
+.totals { display: flex; justify-content: space-between; font-size: 15px; }
+.totals.big { font-family: var(--display); font-size: 26px; }
+.checkout { display: grid; gap: 10px; }
+
+/* Contacto */
+.contact { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.contact h3 { font-family: var(--body); font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.contact p, .contact table { margin: 0; font-size: 15px; color: var(--muted); }
+.contact table { border-collapse: collapse; width: 100%; }
+.contact td { padding: 3px 0; }
+.contact td + td { text-align: right; }
+@media (max-width: 720px) { .contact { grid-template-columns: 1fr; } }
+footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size: 13px; color: var(--muted); }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 999px; font-size: 14px; z-index: 60; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#inicio">Beaty<span>Nails</span></a>
+    <nav class="nav" aria-label="Principal">
+      <a href="#servicios">Servicios</a>
+      <a href="#reservar">Reservar</a>
+      <a href="#tienda">Tienda</a>
+      <a href="#contacto">Contacto</a>
+    </nav>
+    <button class="cart-btn" id="cartOpen" type="button" aria-label="Abrir carrito">Carrito <b id="cartCount" class="num">0</b></button>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="inicio">
+    <div class="wrap">
+      <div>
+        <div class="eyebrow">Salón de uñas · Manicura y pedicura</div>
+        <h1>Uñas que duran, <em>color que brilla.</em></h1>
+        <p>Gel, acrílico, diseño a mano y spa de pies con técnicas certificadas. Elige tu servicio, aparta tu hora en línea y llévate a casa los productos que usamos en cabina.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#reservar">Reservar cita</a>
+          <a class="btn btn-ghost" href="#tienda">Ver tienda</a>
+        </div>
+        <div class="facts">
+          <div><strong class="num">21 días</strong>de duración en gel</div>
+          <div><strong class="num">+60</strong>tonos en cabina</div>
+          <div><strong>Lun a Sáb</strong>10:00 a 20:00</div>
+        </div>
+      </div>
+      <div class="swatches" aria-hidden="true" id="heroArt"></div>
+    </div>
+  </section>
+
+  <section class="block" id="servicios">
+    <div class="wrap">
+      <div class="head">
+        <div><div class="eyebrow">Carta de servicios</div><h2>Servicios y precios</h2></div>
+        <p>Precios en pesos (MXN). El tiempo indicado es lo que dura tu cita en cabina.</p>
+      </div>
+      <div class="menu" id="menu"></div>
+    </div>
+  </section>
+
+  <section class="block" id="reservar">
+    <div class="wrap">
+      <div class="head">
+        <div><div class="eyebrow">Agenda en línea</div><h2>Reserva tu cita</h2></div>
+        <p>Los horarios ocupados aparecen tachados. Te confirmamos por WhatsApp un día antes.</p>
+      </div>
+      <form class="booking" id="bookForm" novalidate>
+        <div class="panel">
+          <div class="step">
+            <div class="step-title"><i>1</i>Servicio</div>
+            <select id="bkService" aria-label="Servicio"></select>
+          </div>
+          <div class="step">
+            <div class="step-title"><i>2</i>Manicurista</div>
+            <div class="chips" id="bkStaff" role="group" aria-label="Manicurista"></div>
+          </div>
+          <div class="step">
+            <div class="step-title"><i>3</i>Día y hora</div>
+            <label class="f" for="bkDate">Día<input type="date" id="bkDate"></label>
+            <div class="slots" id="bkSlots" role="group" aria-label="Hora"></div>
+            <p class="note" id="bkSlotNote"></p>
+          </div>
+          <div class="step">
+            <div class="step-title"><i>4</i>Tus datos</div>
+            <div class="grid2">
+              <label class="f" for="bkName">Nombre<input id="bkName" autocomplete="name" placeholder="Ana López"></label>
+              <label class="f" for="bkPhone">WhatsApp<input id="bkPhone" type="tel" autocomplete="tel" placeholder="55 1234 5678"></label>
+            </div>
+            <label class="f" for="bkNotes">Notas (opcional)<textarea id="bkNotes" rows="2" placeholder="Ej. quiero retirar gel anterior, diseño de flores…"></textarea></label>
+          </div>
+        </div>
+        <aside class="panel summary">
+          <div class="eyebrow">Resumen</div>
+          <dl id="bkSummary"></dl>
+          <div class="total"><span>Total</span><span class="num" id="bkTotal">$0</span></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:16px" type="submit" id="bkSubmit">Confirmar reserva</button>
+          <p class="note">Pagas en el salón. Puedes cancelar sin costo hasta 4 horas antes.</p>
+          <div id="bkMsg"></div>
+          <div class="mine" id="myBookings"></div>
+        </aside>
+      </form>
+    </div>
+  </section>
+
+  <section class="block" id="tienda">
+    <div class="wrap">
+      <div class="head">
+        <div><div class="eyebrow">Tienda en línea</div><h2>Productos para tus uñas</h2></div>
+        <p>Los mismos productos que usamos en cabina. Recoge en el salón sin costo o pide envío a domicilio.</p>
+      </div>
+      <div class="chips filters" id="filters" role="group" aria-label="Categoría"></div>
+      <div class="products" id="products"></div>
+    </div>
+  </section>
+
+  <section class="block" id="contacto">
+    <div class="wrap">
+      <div class="head"><div><div class="eyebrow">Visítanos</div><h2>Contacto y horario</h2></div></div>
+      <div class="contact">
+        <div>
+          <h3>Dirección</h3>
+          <p>Av. Siempre Viva 123, Local 4<br>Col. Centro, Ciudad de México</p>
+        </div>
+        <div>
+          <h3>Horario</h3>
+          <table class="num"><tbody>
+            <tr><td>Lunes a viernes</td><td>10:00 a 20:00</td></tr>
+            <tr><td>Sábado</td><td>10:00 a 18:00</td></tr>
+            <tr><td>Domingo</td><td>Cerrado</td></tr>
+          </tbody></table>
+        </div>
+        <div>
+          <h3>WhatsApp y redes</h3>
+          <p class="num">55 0000 0000<br>@beatynails</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site"><div class="wrap">© <span id="yr"></span> BeatyNails. Dirección, teléfono y fotos de ejemplo: cámbialos por los del salón.</div></footer>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Carrito">
+  <header><h2>Tu carrito</h2><button class="x" type="button" id="cartClose" aria-label="Cerrar">×</button></header>
+  <div class="lines" id="lines"></div>
+  <footer id="cartFoot"></footer>
+</aside>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function () {
+  // ---------- Datos del salón (edita aquí) ----------
+  var SERVICES = [
+    { id: "mani-gel", name: "Manicura en gel", min: 60, price: 350, desc: "Limado, cutícula, esmalte en gel con 21 días de duración." },
+    { id: "acrilico", name: "Uñas acrílicas (set completo)", min: 120, price: 650, desc: "Extensión con molde o tip, forma y largo a elegir." },
+    { id: "relleno", name: "Relleno de acrílico", min: 90, price: 450, desc: "Mantenimiento de tu set a las 2 o 3 semanas." },
+    { id: "rubber", name: "Rubber base / nivelación", min: 75, price: 420, desc: "Refuerza la uña natural con acabado liso y brillante." },
+    { id: "pedi-spa", name: "Pedicura spa", min: 75, price: 400, desc: "Exfoliación, mascarilla, masaje y esmalte tradicional." },
+    { id: "pedi-gel", name: "Pedicura con gel", min: 90, price: 480, desc: "Pedicura spa completa con esmalte en gel." },
+    { id: "diseno", name: "Diseño a mano (por uña)", min: 15, price: 40, desc: "Flores, french, efecto mármol, cromo o pedrería." },
+    { id: "retiro", name: "Retiro de gel o acrílico", min: 30, price: 150, desc: "Retiro seguro sin dañar la uña natural." }
+  ];
+  var STAFF = ["Cualquiera", "Daniela", "Fernanda", "Valeria"];
+  var OPEN = { 1: [10, 20], 2: [10, 20], 3: [10, 20], 4: [10, 20], 5: [10, 20], 6: [10, 18] }; // 0 = domingo cerrado
+  var STEP = 30;
+  var SHIPPING = 99, FREE_FROM = 800;
+
+  var PRODUCTS = [
+    { id: "p1", cat: "Esmaltes", name: "Esmalte en gel Rojo Cereza", desc: "15 ml · curado UV/LED", price: 189, art: ["bottle", "#b0123a"], tag: "Favorito" },
+    { id: "p2", cat: "Esmaltes", name: "Esmalte en gel Nude Rosado", desc: "15 ml · curado UV/LED", price: 189, art: ["bottle", "#e7b5a8"] },
+    { id: "p3", cat: "Esmaltes", name: "Esmalte en gel Lila Pastel", desc: "15 ml · curado UV/LED", price: 189, art: ["bottle", "#b9a3e3"] },
+    { id: "p4", cat: "Esmaltes", name: "Top coat brillo espejo", desc: "15 ml · sin capa pegajosa", price: 210, art: ["bottle", "#f3eef0"] },
+    { id: "p5", cat: "Cuidado", name: "Aceite de cutícula almendra", desc: "30 ml · con vitamina E", price: 149, art: ["dropper", "#e6b34a"], tag: "Nuevo" },
+    { id: "p6", cat: "Cuidado", name: "Crema de manos karité", desc: "100 ml · absorción rápida", price: 179, art: ["tube", "#f1c6d3"] },
+    { id: "p7", cat: "Herramientas", name: "Lima de vidrio", desc: "Grano fino, no daña la uña", price: 99, art: ["file", "#9fc7d9"] },
+    { id: "p8", cat: "Herramientas", name: "Lámpara UV/LED 48 W", desc: "Temporizador 30/60/90 s", price: 749, art: ["lamp", "#d9d3d6"] },
+    { id: "p9", cat: "Kits", name: "Kit de manicura en casa", desc: "Base, top, 2 colores, lima y aceite", price: 690, art: ["kit", "#8c1d40"], tag: "Ahorra 15%" }
+  ];
+
+  // ---------- Utilidades ----------
+  var $ = function (s) { return document.querySelector(s); };
+  var money = function (n) { return "$" + n.toLocaleString("es-MX") ; };
+  function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+  function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  var toastTimer;
+  function toast(t) { var el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, 2600); }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function hm(m) { return pad(Math.floor(m / 60)) + ":" + pad(m % 60); }
+  function parseDate(s) { var p = s.split("-"); return new Date(+p[0], p[1] - 1, +p[2]); }
+  var DAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  var MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  function niceDate(s) { var d = parseDate(s); return DAYS[d.getDay()] + " " + d.getDate() + " " + MONTHS[d.getMonth()]; }
+
+  // ---------- Fotos de producto (ilustraciones de ejemplo; reemplaza por fotos reales) ----------
+  function shade(hex, f) {
+    var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    var m = function (c) { return Math.max(0, Math.min(255, Math.round(f < 0 ? c * (1 + f) : c + (255 - c) * f))); };
+    return "#" + ((1 << 24) + (m(r) << 16) + (m(g) << 8) + m(b)).toString(16).slice(1);
+  }
+  function photo(kind, c) {
+    var bg1 = shade(c, .82), bg2 = shade(c, .62), dk = shade(c, -.35), lt = shade(c, .45);
+    var defs = '<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + bg1 + '"/><stop offset="1" stop-color="' + bg2 + '"/></linearGradient>' +
+      '<linearGradient id="gl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="' + dk + '"/><stop offset=".45" stop-color="' + c + '"/><stop offset="1" stop-color="' + dk + '"/></linearGradient>' +
+      '<linearGradient id="cap" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1b1418"/><stop offset=".4" stop-color="#4a3d44"/><stop offset="1" stop-color="#1b1418"/></linearGradient>' +
+      '<radialGradient id="sh" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".28"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs>';
+    var floor = '<rect width="400" height="500" fill="url(#bg)"/><rect y="370" width="400" height="130" fill="' + bg2 + '" opacity=".7"/><ellipse cx="200" cy="402" rx="120" ry="16" fill="url(#sh)"/>';
+    var s = "";
+    if (kind === "bottle") {
+      s = '<rect x="168" y="110" width="64" height="120" rx="8" fill="url(#cap)"/><rect x="176" y="118" width="10" height="104" rx="5" fill="#fff" opacity=".18"/>' +
+        '<rect x="160" y="226" width="80" height="14" rx="3" fill="#2a2025"/>' +
+        '<path d="M130 250 q0 -12 14 -12 h112 q14 0 14 12 v130 q0 22 -22 22 h-96 q-22 0 -22 -22z" fill="url(#gl)"/>' +
+        '<path d="M144 256 h14 v130 h-14 q-6 0 -6 -6 v-118 q0 -6 6 -6z" fill="#fff" opacity=".35"/>' +
+        '<rect x="168" y="300" width="64" height="40" rx="4" fill="#fff" opacity=".85"/><text x="200" y="318" font-family="Georgia,serif" font-size="11" text-anchor="middle" fill="#2a1520">BEATY</text><text x="200" y="332" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="#2a1520">NAILS</text>';
+    } else if (kind === "dropper") {
+      s = '<ellipse cx="200" cy="120" rx="22" ry="34" fill="#2a2025"/><rect x="176" y="148" width="48" height="40" rx="6" fill="url(#cap)"/>' +
+        '<rect x="150" y="188" width="100" height="210" rx="18" fill="url(#gl)" opacity=".92"/><rect x="162" y="198" width="14" height="186" rx="7" fill="#fff" opacity=".35"/>' +
+        '<rect x="166" y="262" width="68" height="70" rx="4" fill="#fff" opacity=".88"/><text x="200" y="290" font-family="Georgia,serif" font-size="11" text-anchor="middle" fill="#2a1520">ACEITE</text><text x="200" y="306" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="#2a1520">cutícula</text>';
+    } else if (kind === "tube") {
+      s = '<g transform="rotate(-14 200 260)"><rect x="168" y="94" width="64" height="40" rx="6" fill="#f7f2f4"/><path d="M162 134 h76 l12 250 h-100z" fill="url(#gl)"/>' +
+        '<rect x="148" y="378" width="104" height="18" rx="3" fill="' + dk + '"/><path d="M174 150 h10 l6 220 h-10z" fill="#fff" opacity=".35"/>' +
+        '<text x="200" y="260" font-family="Georgia,serif" font-size="16" text-anchor="middle" fill="#2a1520">karité</text></g>';
+    } else if (kind === "file") {
+      s = '<g transform="rotate(-28 200 260)"><rect x="186" y="70" width="28" height="330" rx="14" fill="url(#gl)"/><rect x="190" y="80" width="6" height="310" rx="3" fill="#fff" opacity=".5"/></g>' +
+        '<rect x="110" y="330" width="180" height="56" rx="8" fill="#fff" opacity=".75"/><text x="200" y="364" font-family="Georgia,serif" font-size="15" text-anchor="middle" fill="#2a1520">vidrio templado</text>';
+    } else if (kind === "lamp") {
+      s = '<path d="M90 380 q0 -160 110 -160 q110 0 110 160z" fill="url(#gl)"/><path d="M130 380 q0 -110 70 -110 q70 0 70 110z" fill="#2a1520" opacity=".85"/>' +
+        '<rect x="80" y="376" width="240" height="20" rx="10" fill="' + dk + '"/><circle cx="200" cy="246" r="6" fill="#9be7ff"/><rect x="176" y="300" width="48" height="6" rx="3" fill="#b8a4ff" opacity=".8"/>';
+    } else if (kind === "kit") {
+      s = '<rect x="80" y="210" width="240" height="180" rx="12" fill="url(#gl)"/><rect x="80" y="210" width="240" height="40" rx="12" fill="' + dk + '"/>' +
+        '<text x="200" y="236" font-family="Georgia,serif" font-size="16" text-anchor="middle" fill="#fff">BEATYNAILS KIT</text>' +
+        '<rect x="104" y="268" width="36" height="96" rx="8" fill="#e7b5a8"/><rect x="152" y="268" width="36" height="96" rx="8" fill="#b0123a"/><rect x="200" y="268" width="36" height="96" rx="8" fill="#f3eef0"/><rect x="250" y="276" width="14" height="96" rx="7" fill="#9fc7d9"/><rect x="276" y="268" width="24" height="96" rx="8" fill="#e6b34a"/>';
+    }
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">' + defs + floor + s + '</svg>';
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+
+  // Portada: muestrario de colores en uñas
+  (function hero() {
+    var colors = ["#8c1d40", "#e7b5a8", "#b9a3e3", "#b0123a", "#f3eef0", "#2a1520", "#e6b34a", "#9fc7d9", "#d77a9a"];
+    var g = "";
+    colors.forEach(function (c, i) {
+      var x = 70 + (i % 3) * 130, y = 60 + Math.floor(i / 3) * 130;
+      g += '<g transform="translate(' + x + ' ' + y + ') rotate(' + ((i % 2 ? 1 : -1) * (6 + i)) + ')"><path d="M-34 40 v-40 q0 -40 34 -40 q34 0 34 40 v40z" fill="' + c + '"/><path d="M-22 30 v-30 q0 -24 12 -30" stroke="#fff" stroke-opacity=".5" stroke-width="7" fill="none" stroke-linecap="round"/></g>';
+    });
+    $("#heroArt").innerHTML = '<svg viewBox="0 0 400 400" role="img" aria-label="Muestrario de tonos">' + g + '</svg>';
+  })();
+
+  // ---------- Servicios ----------
+  $("#menu").innerHTML = SERVICES.map(function (s) {
+    return '<div class="svc"><h3>' + esc(s.name) + '</h3><div class="price num">' + money(s.price) + '</div><p>' + esc(s.desc) + ' <span class="dur num">· ' + s.min + ' min</span></p><button type="button" data-book="' + s.id + '">Reservar este servicio →</button></div>';
+  }).join("");
+  $("#menu").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-book]"); if (!b) return;
+    $("#bkService").value = b.dataset.book; renderBooking();
+    $("#reservar").scrollIntoView();
+  });
+
+  // ---------- Reservas ----------
+  var bookings = load("bn_bookings", []);
+  var state = { staff: "Cualquiera", time: null };
+  var svcSel = $("#bkService");
+  svcSel.innerHTML = SERVICES.map(function (s) { return '<option value="' + s.id + '">' + esc(s.name) + ' · ' + money(s.price) + ' · ' + s.min + ' min</option>'; }).join("");
+
+  function nextOpenDay(d) { d = new Date(d); for (var i = 0; i < 8 && !OPEN[d.getDay()]; i++) d.setDate(d.getDate() + 1); return d; }
+  var today = new Date();
+  var dateIn = $("#bkDate");
+  dateIn.min = ymd(today);
+  var maxD = new Date(); maxD.setDate(maxD.getDate() + 60); dateIn.max = ymd(maxD);
+  // Si ya pasó la hora de cierre, el primer día disponible es mañana
+  var firstDay = new Date(today);
+  if (OPEN[firstDay.getDay()] && today.getHours() * 60 + today.getMinutes() + 60 >= OPEN[firstDay.getDay()][1] * 60) firstDay.setDate(firstDay.getDate() + 1);
+  firstDay = nextOpenDay(firstDay);
+  dateIn.value = ymd(firstDay);
+
+  function svc() { return SERVICES.find(function (s) { return s.id === svcSel.value; }); }
+
+  function busy(staff, date, start, len) {
+    return bookings.some(function (b) {
+      return b.staff === staff && b.date === date && start < b.start + b.min && b.start < start + len;
+    });
+  }
+  // Para "Cualquiera": la primera manicurista libre en ese horario
+  function freeStaff(date, start, len) {
+    if (state.staff !== "Cualquiera") return busy(state.staff, date, start, len) ? null : state.staff;
+    for (var i = 1; i < STAFF.length; i++) if (!busy(STAFF[i], date, start, len)) return STAFF[i];
+    return null;
+  }
+
+  function renderBooking() {
+    $("#bkStaff").innerHTML = STAFF.map(function (n) { return '<button type="button" class="chip" aria-pressed="' + (n === state.staff) + '" data-staff="' + esc(n) + '">' + esc(n) + '</button>'; }).join("");
+    var s = svc(), date = dateIn.value, d = date ? parseDate(date) : null, hours = d ? OPEN[d.getDay()] : null;
+    var html = "", note = "";
+    if (!date) note = "Elige un día.";
+    else if (!hours) note = "Los domingos el salón está cerrado. Elige otro día.";
+    else {
+      var now = new Date(), isToday = date === ymd(now), nowMin = now.getHours() * 60 + now.getMinutes();
+      var count = 0;
+      for (var m = hours[0] * 60; m + s.min <= hours[1] * 60; m += STEP) {
+        var past = isToday && m <= nowMin + 30;
+        var ok = !past && freeStaff(date, m, s.min);
+        if (ok) count++;
+        html += '<button type="button" class="chip num" data-time="' + m + '" aria-pressed="' + (state.time === m) + '"' + (ok ? "" : " disabled") + '>' + hm(m) + '</button>';
+      }
+      if (state.time != null && !(state.time >= hours[0] * 60 && freeStaff(date, state.time, s.min))) state.time = null;
+      note = count ? "Duración del servicio: " + s.min + " min." : "No quedan horarios libres este día. Prueba otro día u otra manicurista.";
+    }
+    $("#bkSlots").innerHTML = html;
+    $("#bkSlotNote").textContent = note;
+
+    var who = state.time != null ? freeStaff(date, state.time, s.min) : null;
+    $("#bkSummary").innerHTML =
+      "<dt>Servicio</dt><dd>" + esc(s.name) + "</dd>" +
+      "<dt>Manicurista</dt><dd>" + esc(who || state.staff) + "</dd>" +
+      "<dt>Día</dt><dd>" + (date && hours ? esc(niceDate(date)) : "—") + "</dd>" +
+      '<dt>Hora</dt><dd class="num">' + (state.time != null ? hm(state.time) + " a " + hm(state.time + s.min) : "—") + "</dd>";
+    $("#bkTotal").textContent = money(s.price);
+    renderMine();
+  }
+
+  function renderMine() {
+    var nowKey = ymd(new Date());
+    var mine = bookings.filter(function (b) { return b.mine && b.date >= nowKey; }).sort(function (a, b) { return (a.date + hm(a.start)).localeCompare(b.date + hm(b.start)); });
+    $("#myBookings").innerHTML = mine.length ? "<h3>Mis próximas citas</h3><ul>" + mine.map(function (b) {
+      var s = SERVICES.find(function (x) { return x.id === b.service; }) || { name: b.service };
+      return '<li><span><b>' + esc(niceDate(b.date)) + ' · <span class="num">' + hm(b.start) + '</span></b><br><span class="muted">' + esc(s.name) + ' con ' + esc(b.staff) + '</span></span><button type="button" class="linkbtn" data-cancel="' + b.id + '">Cancelar</button></li>';
+    }).join("") + "</ul>" : "";
+  }
+
+  // Citas de ejemplo para que la agenda muestre horarios ocupados
+  if (!load("bn_seeded", false)) {
+    var d1 = ymd(firstDay), d2 = new Date(firstDay); d2.setDate(d2.getDate() + 1); d2 = ymd(nextOpenDay(d2));
+    [["Daniela", d1, 660, 120], ["Fernanda", d1, 720, 60], ["Valeria", d1, 720, 90], ["Daniela", d1, 960, 60], ["Fernanda", d2, 600, 90]].forEach(function (x, i) {
+      bookings.push({ id: "demo" + i, staff: x[0], date: x[1], start: x[2], min: x[3], service: "demo", demo: true });
+    });
+    save("bn_bookings", bookings); save("bn_seeded", true);
+  }
+
+  svcSel.addEventListener("change", renderBooking);
+  dateIn.addEventListener("change", function () { state.time = null; renderBooking(); });
+  $("#bkStaff").addEventListener("click", function (e) { var b = e.target.closest("[data-staff]"); if (!b) return; state.staff = b.dataset.staff; renderBooking(); });
+  $("#bkSlots").addEventListener("click", function (e) { var b = e.target.closest("[data-time]"); if (!b || b.disabled) return; state.time = +b.dataset.time; renderBooking(); });
+  $("#myBookings").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-cancel]"); if (!b) return;
+    bookings = bookings.filter(function (x) { return x.id !== b.dataset.cancel; }); save("bn_bookings", bookings);
+    $("#bkMsg").innerHTML = ""; renderBooking(); toast("Cita cancelada");
+  });
+
+  $("#bookForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var s = svc(), name = $("#bkName").value.trim(), phone = $("#bkPhone").value.replace(/\D/g, ""), msg = $("#bkMsg");
+    var err = state.time == null ? "Elige una hora disponible." : !name ? "Escribe tu nombre." : phone.length < 10 ? "Escribe tu WhatsApp a 10 dígitos." : "";
+    if (err) { msg.innerHTML = '<div class="msg">' + err + '</div>'; return; }
+    var who = freeStaff(dateIn.value, state.time, s.min);
+    if (!who) { msg.innerHTML = '<div class="msg">Ese horario se acaba de ocupar. Elige otro.</div>'; renderBooking(); return; }
+    var b = { id: "b" + Date.now(), service: s.id, staff: who, date: dateIn.value, start: state.time, min: s.min, name: name, phone: phone, notes: $("#bkNotes").value.trim(), mine: true, created: new Date().toISOString() };
+    bookings.push(b); save("bn_bookings", bookings);
+    msg.innerHTML = '<div class="msg ok"><b>¡Listo, ' + esc(name.split(" ")[0]) + '!</b> Tu cita de ' + esc(s.name.toLowerCase()) + ' quedó apartada el ' + esc(niceDate(b.date)) + ' a las ' + hm(b.start) + ' con ' + esc(who) + '.</div>';
+    state.time = null; $("#bkNotes").value = "";
+    renderBooking();
+  });
+
+  // ---------- Tienda ----------
+  var cart = load("bn_cart", {});
+  var cat = "Todo";
+  var CATS = ["Todo"].concat(PRODUCTS.map(function (p) { return p.cat; }).filter(function (c, i, a) { return a.indexOf(c) === i; }));
+  PRODUCTS.forEach(function (p) { p.img = photo(p.art[0], p.art[1]); });
+
+  function renderShop() {
+    $("#filters").innerHTML = CATS.map(function (c) { return '<button type="button" class="chip" data-cat="' + c + '" aria-pressed="' + (c === cat) + '">' + c + '</button>'; }).join("");
+    $("#products").innerHTML = PRODUCTS.filter(function (p) { return cat === "Todo" || p.cat === cat; }).map(function (p) {
+      return '<article class="prod"><div class="ph"><img src="' + p.img + '" alt="' + esc(p.name) + '" loading="lazy">' + (p.tag ? '<span class="tag">' + esc(p.tag) + '</span>' : "") + '</div>' +
+        '<div class="info"><h3>' + esc(p.name) + '</h3><p>' + esc(p.desc) + '</p><div class="row"><span class="price num">' + money(p.price) + '</span><button type="button" class="add" data-add="' + p.id + '">Agregar</button></div></div></article>';
+    }).join("");
+  }
+  $("#filters").addEventListener("click", function (e) { var b = e.target.closest("[data-cat]"); if (!b) return; cat = b.dataset.cat; renderShop(); });
+  $("#products").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-add]"); if (!b) return;
+    cart[b.dataset.add] = (cart[b.dataset.add] || 0) + 1; save("bn_cart", cart); renderCart();
+    toast("Agregado al carrito");
+  });
+
+  var delivery = "recoger", ordered = null;
+  function cartItems() { return Object.keys(cart).map(function (id) { var p = PRODUCTS.find(function (x) { return x.id === id; }); return p && cart[id] > 0 ? { p: p, q: cart[id] } : null; }).filter(Boolean); }
+  function renderCart() {
+    var items = cartItems(), n = items.reduce(function (a, i) { return a + i.q; }, 0);
+    $("#cartCount").textContent = n;
+    if (ordered) {
+      $("#lines").innerHTML = '<div class="empty"><h2 style="color:var(--ink);margin-bottom:10px">¡Gracias por tu compra!</h2><p>Pedido <b class="num">' + ordered.id + '</b> por <b class="num">' + money(ordered.total) + '</b>.<br>' +
+        (ordered.delivery === "recoger" ? "Te avisamos por WhatsApp cuando esté listo para recoger en el salón." : "Te escribimos por WhatsApp para coordinar el pago y el envío.") + '</p></div>';
+      $("#cartFoot").innerHTML = '<button class="btn btn-primary" type="button" id="keepShopping">Seguir comprando</button>';
+      return;
+    }
+    if (!items.length) {
+      $("#lines").innerHTML = '<div class="empty">Tu carrito está vacío.<br>Agrega esmaltes, aceites o kits desde la tienda.</div>';
+      $("#cartFoot").innerHTML = ""; return;
+    }
+    $("#lines").innerHTML = items.map(function (i) {
+      return '<div class="line"><img src="' + i.p.img + '" alt=""><div><div class="t">' + esc(i.p.name) + '</div><div class="muted num" style="font-size:13px">' + money(i.p.price) + ' c/u</div>' +
+        '<div class="qty"><button type="button" data-dec="' + i.p.id + '" aria-label="Quitar uno">−</button><span class="num">' + i.q + '</span><button type="button" data-inc="' + i.p.id + '" aria-label="Agregar uno">+</button></div></div>' +
+        '<div class="num" style="font-weight:600">' + money(i.p.price * i.q) + '</div></div>';
+    }).join("");
+    var sub = items.reduce(function (a, i) { return a + i.p.price * i.q; }, 0);
+    var ship = delivery === "envio" && sub < FREE_FROM ? SHIPPING : 0;
+    $("#cartFoot").innerHTML =
+      '<div class="totals"><span>Subtotal</span><span class="num">' + money(sub) + '</span></div>' +
+      '<div class="totals"><span>' + (delivery === "envio" ? "Envío" + (ship ? "" : " (gratis desde " + money(FREE_FROM) + ")") : "Recoger en el salón") + '</span><span class="num">' + (ship ? money(ship) : "Gratis") + '</span></div>' +
+      '<div class="totals big"><span>Total</span><span class="num">' + money(sub + ship) + '</span></div>' +
+      '<form class="checkout" id="checkout" novalidate>' +
+      '<div class="chips" role="group" aria-label="Entrega"><button type="button" class="chip" data-del="recoger" aria-pressed="' + (delivery === "recoger") + '">Recoger en el salón</button><button type="button" class="chip" data-del="envio" aria-pressed="' + (delivery === "envio") + '">Envío a domicilio</button></div>' +
+      '<input id="coName" placeholder="Nombre" autocomplete="name" aria-label="Nombre">' +
+      '<input id="coPhone" type="tel" placeholder="WhatsApp (10 dígitos)" autocomplete="tel" aria-label="WhatsApp">' +
+      (delivery === "envio" ? '<input id="coAddr" placeholder="Dirección de entrega" autocomplete="street-address" aria-label="Dirección">' : "") +
+      '<div id="coMsg"></div><button class="btn btn-primary" type="submit">Hacer pedido · <span class="num">' + money(sub + ship) + '</span></button></form>';
+  }
+  $("#lines").addEventListener("click", function (e) {
+    var inc = e.target.closest("[data-inc]"), dec = e.target.closest("[data-dec]");
+    if (inc) cart[inc.dataset.inc]++;
+    else if (dec) { cart[dec.dataset.dec]--; if (cart[dec.dataset.dec] <= 0) delete cart[dec.dataset.dec]; }
+    else return;
+    save("bn_cart", cart); renderCart();
+  });
+  $("#cartFoot").addEventListener("click", function (e) {
+    var d = e.target.closest("[data-del]");
+    if (d) { delivery = d.dataset.del; renderCart(); }
+    if (e.target.closest("#keepShopping")) { ordered = null; closeCart(); renderCart(); }
+  });
+  $("#cartFoot").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("#coName").value.trim(), phone = $("#coPhone").value.replace(/\D/g, ""), addr = $("#coAddr") ? $("#coAddr").value.trim() : "";
+    var err = !name ? "Escribe tu nombre." : phone.length < 10 ? "Escribe tu WhatsApp a 10 dígitos." : delivery === "envio" && !addr ? "Escribe la dirección de entrega." : "";
+    if (err) { $("#coMsg").innerHTML = '<div class="msg" style="margin:0">' + err + '</div>'; return; }
+    var items = cartItems(), sub = items.reduce(function (a, i) { return a + i.p.price * i.q; }, 0);
+    var ship = delivery === "envio" && sub < FREE_FROM ? SHIPPING : 0;
+    var orders = load("bn_orders", []);
+    ordered = { id: "BN-" + String(1001 + orders.length), total: sub + ship, delivery: delivery, name: name, phone: phone, address: addr, items: items.map(function (i) { return { id: i.p.id, q: i.q, price: i.p.price }; }), created: new Date().toISOString() };
+    orders.push(ordered); save("bn_orders", orders);
+    cart = {}; save("bn_cart", cart); renderCart();
+  });
+
+  function openCart() { $("#drawer").hidden = false; $("#scrim").hidden = false; $("#cartClose").focus(); }
+  function closeCart() { $("#drawer").hidden = true; $("#scrim").hidden = true; }
+  $("#cartOpen").addEventListener("click", openCart);
+  $("#cartClose").addEventListener("click", closeCart);
+  $("#scrim").addEventListener("click", closeCart);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeCart(); });
+
+  $("#yr").textContent = new Date().getFullYear();
+  renderBooking(); renderShop(); renderCart();
+})();
+</script>
+</body>
+</html>
