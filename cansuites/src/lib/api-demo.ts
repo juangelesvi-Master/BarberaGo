@@ -238,6 +238,11 @@ export const apiDemo: Api = {
     return { confirmar: false };
   },
   async recuperar() { /* en la demostración no se mandan correos */ },
+  async cambiarClave(clave) {
+    const db = leer(); const u = yo(db);
+    if (clave.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
+    u.clave = clave; guardar(db);
+  },
   async salir() {
     const db = leer(); db.sesion = null; guardar(db); avisar();
   },

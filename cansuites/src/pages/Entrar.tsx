@@ -3,7 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { api, mensajeError } from '../lib/datos';
 import { useCuenta } from '../lib/cuenta';
 import { CUENTAS_DEMO } from '../lib/api-demo';
-import { Aviso, Campo } from '../components/ui';
+import { Aviso, Campo, InputClave } from '../components/ui';
 import { Pagina } from '../components/Sitio';
 
 type Modo = 'entrar' | 'registro' | 'recuperar';
@@ -53,7 +53,7 @@ export function FormularioAcceso({ inicial = 'entrar', titulo }: { inicial?: Mod
       </Campo>
       {modo !== 'recuperar' && (
         <Campo etiqueta="Contraseña">
-          <input type="password" value={clave} onChange={(e) => setClave(e.target.value)} required minLength={6}
+          <InputClave value={clave} onChange={(e) => setClave(e.target.value)} required minLength={6}
             autoComplete={modo === 'registro' ? 'new-password' : 'current-password'} />
         </Campo>
       )}

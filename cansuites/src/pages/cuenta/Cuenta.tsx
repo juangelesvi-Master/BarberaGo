@@ -5,7 +5,7 @@ import { useCuenta } from '../../lib/cuenta';
 import type { CamaraCliente, Mascota, Pedido, Reserva } from '../../lib/tipos';
 import { TALLAS, esperandoPago } from '../../lib/tipos';
 import { edad, hoyIso, precio } from '../../lib/formato';
-import { Aviso, Campo, Cargando, Modal, Vacio } from '../../components/ui';
+import { Aviso, Campo, Cargando, InputClave, Modal, Vacio } from '../../components/ui';
 import { Pagina } from '../../components/Sitio';
 import { FilaPedido, FilaReserva } from '../../components/Listas';
 import Expediente from '../../components/Expediente';
@@ -196,12 +196,54 @@ function MisDatos() {
     try { await api.actualizarPerfil({ nombre, telefono }); await recargar(); setAviso({ tipo: 'ok', texto: 'Cambios guardados' }); } catch (err) { setAviso({ tipo: 'error', texto: mensajeError(err) }); }
   }
   return (
-    <form className="tarjeta formulario angosta-form" onSubmit={guardar}>
-      <Campo etiqueta="Nombre"><input value={nombre} onChange={(e) => setNombre(e.target.value)} required /></Campo>
-      <Campo etiqueta="WhatsApp" ayuda="Aquí te confirmamos reservas y te mandamos fotos de tu perro."><input type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></Campo>
-      <Campo etiqueta="Correo"><input value={perfil!.email || ''} disabled /></Campo>
+    <>
+      <CambiarClave />
+      <form className="tarjeta formulario angosta-form" onSubmit={guardar}>
+        <Campo etiqueta="Nombre"><input value={nombre} onChange={(e) => setNombre(e.target.value)} required /></Campo>
+        <Campo etiqueta="WhatsApp" ayuda="Aquí te confirmamos reservas y te mandamos fotos de tu perro."><input type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></Campo>
+        <Campo etiqueta="Correo"><input value={perfil!.email || ''} disabled /></Campo>
+        {aviso && <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso>}
+        <div className="acciones"><button className="btn btn-primario">Guardar</button></div>
+      </form>
+    </>
+  );
+}
+
+/** Cambiar contraseña. Al volver del correo de «Olvidé mi contraseña» llega aquí abierto (?nueva_clave=1). */
+function CambiarClave() {
+  const [params, setParams] = useSearchParams();
+  const recuperando = params.get('nueva_clave') === '1';
+  const [abierto, setAbierto] = useState(recuperando);
+  const [clave, setClave] = useState('');
+  const [aviso, setAviso] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
+  async function guardar(e: FormEvent) {
+    e.preventDefault();
+    try {
+      await api.cambiarClave(clave);
+      setClave(''); setAbierto(false);
+      setAviso({ tipo: 'ok', texto: 'Listo, tu contraseña quedó cambiada.' });
+      if (recuperando) setParams({ vista: 'datos' }, { replace: true });
+    } catch (err) { setAviso({ tipo: 'error', texto: mensajeError(err) }); }
+  }
+  if (!abierto) {
+    return (
+      <div className="angosta-form mb">
+        {aviso && <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso>}
+        <button className="btn" onClick={() => { setAbierto(true); setAviso(null); }}>🔒 Cambiar contraseña</button>
+      </div>
+    );
+  }
+  return (
+    <form className="tarjeta formulario angosta-form mb" onSubmit={guardar}>
+      <h2>{recuperando ? 'Escribe tu nueva contraseña' : 'Cambiar contraseña'}</h2>
+      <Campo etiqueta="Nueva contraseña" ayuda="Mínimo 6 caracteres.">
+        <InputClave value={clave} onChange={(e) => setClave(e.target.value)} required minLength={6} autoComplete="new-password" autoFocus />
+      </Campo>
       {aviso && <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso>}
-      <div className="acciones"><button className="btn btn-primario">Guardar</button></div>
+      <div className="acciones">
+        {!recuperando && <button type="button" className="btn" onClick={() => { setAbierto(false); setClave(''); }}>Cancelar</button>}
+        <button className="btn btn-primario">Guardar contraseña</button>
+      </div>
     </form>
   );
 }

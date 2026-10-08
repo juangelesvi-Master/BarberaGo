@@ -251,6 +251,11 @@ code { background: var(--superficie-2); padding: .05rem .35rem; border-radius: 6
 .campo { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
 .campo > span { font-size: .85rem; font-weight: 600; color: var(--texto-2); }
 .campo small { color: var(--texto-2); font-size: .8rem; }
+.mb { margin-bottom: 1rem; }
+.input-clave, .campo > .input-clave { position: relative; display: block; font-size: 1rem; font-weight: 400; color: var(--texto); }
+.input-clave input { padding-right: 3rem; }
+.ver-clave { position: absolute; top: 0; right: 0; height: 100%; width: 44px; display: flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--texto-2); cursor: pointer; border-radius: 0 12px 12px 0; }
+.ver-clave:hover { color: var(--naranja); }
 .fila-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; }
 .check { display: flex; align-items: center; gap: .55rem; cursor: pointer; }
 .acciones { display: flex; gap: .5rem; justify-content: flex-end; flex-wrap: wrap; align-items: center; }

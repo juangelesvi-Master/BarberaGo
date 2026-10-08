@@ -20,6 +20,8 @@ export interface Api {
   entrar(email: string, clave: string): Promise<void>;
   registrar(datos: { nombre: string; telefono: string; email: string; clave: string }): Promise<{ confirmar: boolean }>;
   recuperar(email: string): Promise<void>;
+  /** Cambia la contraseña de la sesión actual (también al volver del correo de recuperación). */
+  cambiarClave(clave: string): Promise<void>;
   salir(): Promise<void>;
   actualizarPerfil(datos: { nombre: string; telefono: string | null }): Promise<void>;
   subirFoto(archivo: File): Promise<string>;

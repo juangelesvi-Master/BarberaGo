@@ -82,7 +82,11 @@ export const apiSupabase: Api = {
     return { confirmar: !data.session };
   },
   async recuperar(email) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/cuenta` });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/cuenta?vista=datos&nueva_clave=1` });
+    if (error) throw error;
+  },
+  async cambiarClave(clave) {
+    const { error } = await supabase.auth.updateUser({ password: clave });
     if (error) throw error;
   },
   async salir() { await supabase.auth.signOut(); },
