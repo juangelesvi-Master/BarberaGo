@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.local
+ios
+*.tsbuildinfo
+# La app Android de CanSuites sí se versiona (la raíz ignora "android" de BarberaGo).
+!android

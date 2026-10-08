@@ -1,0 +1,76 @@
+# Compila la app Android de CanSuites (cansuites/android) y la publica como descarga en el release "cansuites-app".
+name: CanSuites APK
+
+on:
+  push:
+    paths:
+      - 'cansuites/android/**'
+      - '.github/workflows/cansuites-apk.yml'
+  workflow_dispatch:
+    inputs:
+      sitio_url:
+        description: 'Sitio que abre la app'
+        default: 'https://cansuites.restorago.com'
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cansuites/android
+    env:
+      SITIO_URL: ${{ inputs.sitio_url || 'https://cansuites.restorago.com' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      # Llave de firma: si existe el secreto CANSUITES_KEYSTORE_B64 se usa esa (para poder actualizar la app
+      # sin desinstalarla). Si no, se crea una nueva en cada compilación.
+      - name: Llave de firma
+        env:
+          KEYSTORE_B64: ${{ secrets.CANSUITES_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.CANSUITES_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/cansuites.jks"
+            CLAVE="$KEYSTORE_PASSWORD"
+          else
+            CLAVE="$(openssl rand -hex 16)"
+            keytool -genkeypair -keystore "$RUNNER_TEMP/cansuites.jks" -alias cansuites -keyalg RSA -keysize 2048 \
+              -validity 10000 -storepass "$CLAVE" -keypass "$CLAVE" -dname "CN=CanSuites, O=CanSuites, C=MX"
+          fi
+          echo "::add-mask::$CLAVE"
+          echo "CANSUITES_KEYSTORE=$RUNNER_TEMP/cansuites.jks" >> "$GITHUB_ENV"
+          echo "CANSUITES_KEYSTORE_PASSWORD=$CLAVE" >> "$GITHUB_ENV"
+
+      - name: Compilar
+        run: gradle assembleRelease --no-daemon -PsitioUrl="$SITIO_URL" -PversionCode=${{ github.run_number }} -PversionName="1.0.${{ github.run_number }}"
+
+      - name: Preparar APK
+        run: cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/CanSuites.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CanSuites-apk
+          path: ${{ runner.temp }}/CanSuites.apk
+
+      - name: Publicar descarga
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view cansuites-app >/dev/null 2>&1; then
+            gh release create cansuites-app --target "$GITHUB_SHA" --title "CanSuites para Android" \
+              --notes "App de CanSuites para Android. Descarga CanSuites.apk e instálala en tu celular." --latest=false
+          fi
+          gh release upload cansuites-app "$RUNNER_TEMP/CanSuites.apk" --clobber
