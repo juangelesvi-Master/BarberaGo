@@ -211,7 +211,7 @@ function MisDatos() {
 
 /** Cambiar contraseña. Al volver del correo de «Olvidé mi contraseña» llega aquí abierto (?nueva_clave=1). */
 function CambiarClave() {
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const recuperando = params.get('nueva_clave') === '1';
   const [abierto, setAbierto] = useState(recuperando);
   const [clave, setClave] = useState('');
@@ -220,9 +220,9 @@ function CambiarClave() {
     e.preventDefault();
     try {
       await api.cambiarClave(clave);
-      setClave(''); setAbierto(false);
-      setAviso({ tipo: 'ok', texto: 'Listo, tu contraseña quedó cambiada.' });
-      if (recuperando) setParams({ vista: 'datos' }, { replace: true });
+      // Se cierra la sesión y se vuelve a entrar con la contraseña nueva (recarga completa: sin estado viejo).
+      await api.salir();
+      window.location.replace('/entrar?clave=cambiada');
     } catch (err) { setAviso({ tipo: 'error', texto: mensajeError(err) }); }
   }
   if (!abierto) {

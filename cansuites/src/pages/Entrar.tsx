@@ -9,14 +9,14 @@ import { Pagina } from '../components/Sitio';
 type Modo = 'entrar' | 'registro' | 'recuperar';
 
 /** Formulario de acceso para usar dentro de otras páginas (reservar, tienda) o en /entrar. */
-export function FormularioAcceso({ inicial = 'entrar', titulo }: { inicial?: Modo; titulo?: string }) {
+export function FormularioAcceso({ inicial = 'entrar', titulo, avisoInicial = '' }: { inicial?: Modo; titulo?: string; avisoInicial?: string }) {
   const [modo, setModo] = useState<Modo>(inicial);
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
   const [clave, setClave] = useState('');
   const [error, setError] = useState('');
-  const [ok, setOk] = useState('');
+  const [ok, setOk] = useState(avisoInicial);
   const [enviando, setEnviando] = useState(false);
 
   async function enviar(e: FormEvent) {
@@ -84,7 +84,8 @@ export default function Entrar() {
   if (perfil) return <Navigate to={params.get('volver') || (esPersonal ? '/admin' : '/cuenta')} replace />;
   return (
     <Pagina angosta clase="pagina-acceso">
-      <FormularioAcceso inicial={params.get('modo') === 'registro' ? 'registro' : 'entrar'} />
+      <FormularioAcceso inicial={params.get('modo') === 'registro' ? 'registro' : 'entrar'}
+        avisoInicial={params.get('clave') === 'cambiada' ? 'Tu contraseña quedó cambiada. Entra con tu nueva contraseña.' : ''} />
     </Pagina>
   );
 }
