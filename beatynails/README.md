@@ -6,6 +6,7 @@ hosting estático (Hostinger, Netlify, Vercel).
 
 - `index.html`: la página para clientas.
 - `admin.html`: el panel del salón (enlace "Panel del salón" al pie de la página).
+- `entrar.html` y `auth.js`: pantalla de entrada al panel con usuario y contraseña.
 - `datos.js`: datos y funciones que comparten las dos páginas.
 - `ticket.js`: tickets para impresora térmica (lo usa el panel).
 - `pagos.js`: cobro en línea con Mercado Pago y Stripe (lo usan las dos páginas).
@@ -26,6 +27,11 @@ hosting estático (Hostinger, Netlify, Vercel).
 - **Contacto y horario.**
 
 ## Panel del salón (`admin.html`)
+
+Para abrir el panel hay que entrar con usuario y contraseña (`entrar.html`). La primera vez que se abre
+en un navegador se crea el acceso y se muestra un **código de recuperación** para poner una contraseña
+nueva si se olvida. La contraseña se guarda cifrada (PBKDF2), nunca tal cual; tras 5 intentos fallidos
+hay que esperar 30 segundos. En **Cuenta** se cambia la contraseña y se cierra la sesión.
 
 - **Resumen:** ingresos de servicios y tienda, citas atendidas, ventas, citas por venir, gráfica de
   ingresos de los últimos 14 días, agenda de hoy, pedidos por atender, más vendidos e inventario bajo.
@@ -114,5 +120,6 @@ desde el panel.
 
 Todo (reservas, pedidos, productos y horario) se guarda solo en el navegador donde se usa
 (`localStorage`): el panel ve lo que se hizo en ese mismo navegador, pero no las reservas de las clientas
-desde sus teléfonos (ni sus pagos en línea), y el panel no tiene contraseña. El siguiente paso es
+desde sus teléfonos (ni sus pagos en línea), y el acceso al panel también es de cada navegador: protege
+el panel en el equipo del salón, pero en otro navegador se crea un acceso nuevo (con un panel vacío). El siguiente paso es
 guardarlos en una base de datos (por ejemplo el Supabase que ya usa BarberaGo).

@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Panel BeatyNails</title>
 <meta name="robots" content="noindex">
+<script src="auth.js"></script>
+<script>if (!Auth.guard("entrar.html")) document.documentElement.style.visibility = "hidden";</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;500;600;700&display=swap">
@@ -295,6 +297,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       <button type="button" data-go="horario">Horario y servicios</button>
       <button type="button" data-go="pagos">Pagos en línea</button>
       <button type="button" data-go="impresora">Impresora</button>
+      <button type="button" data-go="cuenta">Cuenta</button>
     </nav>
     <div class="foot">
       <a href="index.html">Ver la página →</a>
@@ -568,6 +571,28 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
         </div>
       </div>
     </section>
+    <!-- CUENTA -->
+    <section data-view="cuenta" hidden>
+      <div class="page-head">
+        <div><h1>Cuenta</h1><p>Acceso al panel en este navegador.</p></div>
+        <button type="button" class="btn btn-line" id="logout">Cerrar sesión</button>
+      </div>
+      <div class="grid-2">
+        <form class="card" id="pwForm" novalidate>
+          <h2>Cambiar contraseña <span class="muted" id="acctUser"></span></h2>
+          <div style="display:grid;gap:12px">
+            <label class="f" for="pwOld">Contraseña actual<input id="pwOld" type="password" autocomplete="current-password"></label>
+            <label class="f" for="pwNew">Contraseña nueva<input id="pwNew" type="password" autocomplete="new-password" placeholder="Al menos 8 caracteres"></label>
+            <label class="f" for="pwNew2">Repite la contraseña nueva<input id="pwNew2" type="password" autocomplete="new-password"></label>
+          </div>
+          <div class="row-actions"><button type="submit" class="btn btn-primary">Guardar contraseña</button><span class="hint" id="pwMsg"></span></div>
+        </form>
+        <div class="card">
+          <h2>Cómo funciona el acceso</h2>
+          <p class="hint" style="font-size:14px;line-height:1.6">La contraseña protege el panel en este navegador, donde también se guardan las citas y ventas. En otro equipo o navegador se crea su propio acceso la primera vez. Si olvidas la contraseña, en la pantalla de entrada usa "¿Olvidaste tu contraseña?" con tu código de recuperación.</p>
+        </div>
+      </div>
+    </section>
     <!-- IMPRESORA -->
     <section data-view="impresora" hidden>
       <div class="page-head">
@@ -712,7 +737,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     $("#bdgCitas").hidden = !todayPending; $("#bdgCitas").textContent = todayPending;
     $("#bdgVentas").hidden = !newOrders; $("#bdgVentas").textContent = newOrders;
     $("#demoNote").hidden = !bookings.some(function (b) { return b.demo; }) && !orders.some(function (o) { return o.demo; });
-    ({ resumen: renderResumen, caja: renderCaja, citas: renderCitas, ventas: renderVentas, productos: renderProductos, horario: renderHorario, pagos: renderPagos, impresora: renderImpresora })[current]();
+    ({ resumen: renderResumen, caja: renderCaja, citas: renderCitas, ventas: renderVentas, productos: renderProductos, horario: renderHorario, pagos: renderPagos, cuenta: renderCuenta, impresora: renderImpresora })[current]();
   }
   // Si la página está abierta en otra pestaña, refleja reservas y pedidos nuevos
   window.addEventListener("storage", function () { if (!$("#drawer").hidden) return; render(); });
@@ -1125,6 +1150,21 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     var set = BN.settings(); set.shipping = Math.max(0, +$("#shipCost").value || 0); set.freeFrom = Math.max(0, +$("#shipFree").value || 0);
     if (saveOr("bn_settings", set)) toast("Envíos guardados");
   });
+
+  // ---------- Cuenta ----------
+  function renderCuenta() { $("#acctUser").textContent = "Usuario: " + Auth.name(); $("#pwMsg").textContent = ""; }
+  $("#logout").addEventListener("click", function () { Auth.logout(); location.replace("entrar.html"); });
+  $("#pwForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var msg = $("#pwMsg"), np = $("#pwNew").value;
+    msg.style.color = "var(--bad)";
+    if (np !== $("#pwNew2").value) { msg.textContent = "Las contraseñas nuevas no coinciden."; return; }
+    Auth.change($("#pwOld").value, np).then(function () {
+      $("#pwForm").reset(); msg.textContent = ""; toast("Contraseña cambiada");
+    }, function (x) { msg.textContent = x.message; });
+  });
+  // Si se cierra la sesión en otra pestaña, este panel también se cierra
+  window.addEventListener("storage", function (e) { if ((e.key === "bn_session" || e.key === "bn_auth" || e.key === null) && !Auth.session()) Auth.guard("entrar.html"); });
 
   // ---------- Pagos en línea ----------
   function renderPagos() {
