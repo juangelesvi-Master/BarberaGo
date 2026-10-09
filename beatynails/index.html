@@ -167,6 +167,17 @@ input, select, textarea { width: 100%; border: 1px solid var(--line); background
 .totals { display: flex; justify-content: space-between; font-size: 15px; }
 .totals.big { font-family: var(--display); font-size: 26px; }
 .checkout { display: grid; gap: 10px; }
+.checkout .lbl { font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 4px; }
+
+/* Pago */
+.payopts { display: grid; gap: 8px; }
+.payopt { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; text-align: left; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+.payopt[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.payopt b { font-size: 15px; }
+.payopt small { grid-column: 1; color: var(--muted); font-size: 13px; }
+.payopt .num { grid-column: 2; grid-row: 1 / 3; align-self: center; font-weight: 700; }
+.prov { display: grid; gap: 8px; }
+.prov > span { font-size: 13px; font-weight: 600; color: var(--muted); }
 
 /* Contacto */
 .contact { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
@@ -257,13 +268,18 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
             </div>
             <label class="f" for="bkNotes">Notas (opcional)<textarea id="bkNotes" rows="2" placeholder="Ej. quiero retirar gel anterior, diseño de flores…"></textarea></label>
           </div>
+          <div class="step" id="bkPayStep">
+            <div class="step-title"><i>5</i>Pago</div>
+            <div class="payopts" id="bkPay" role="radiogroup" aria-label="Forma de pago"></div>
+            <div class="prov" id="bkProv"></div>
+          </div>
         </div>
         <aside class="panel summary">
           <div class="eyebrow">Resumen</div>
           <dl id="bkSummary"></dl>
-          <div class="total"><span>Total</span><span class="num" id="bkTotal">$0</span></div>
+          <div class="total"><span id="bkTotalLbl">Total</span><span class="num" id="bkTotal">$0</span></div>
           <button class="btn btn-primary" style="width:100%;margin-top:16px" type="submit" id="bkSubmit">Confirmar reserva</button>
-          <p class="note">Pagas en el salón. Puedes cancelar sin costo hasta 4 horas antes.</p>
+          <p class="note" id="bkPayNote">Pagas en el salón. Puedes cancelar sin costo hasta 4 horas antes.</p>
           <div id="bkMsg"></div>
           <div class="mine" id="myBookings"></div>
         </aside>
@@ -314,12 +330,14 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
 <div class="toast" id="toast" hidden role="status"></div>
 
 <script src="datos.js"></script>
+<script src="pagos.js"></script>
 <script>
 (function () {
   // Datos y utilidades compartidos con el panel: datos.js
   BN.seed();
   var SERVICES = BN.services(), STAFF = ["Cualquiera"].concat(BN.staff()), OPEN = BN.hours(), SET = BN.settings();
   var STEP = SET.step, SHIPPING = SET.shipping, FREE_FROM = SET.freeFrom;
+  var PAY = SET.pagos, ONLINE = Pagos.ready(), PROVS = Pagos.providers();
   var PRODUCTS = BN.products().filter(function (p) { return p.active !== false; });
   var load = BN.load, save = BN.save, esc = BN.esc, money = BN.money, ymd = BN.ymd, hm = BN.hm, parseDate = BN.parseDate, niceDate = BN.niceDate;
   var $ = function (s) { return document.querySelector(s); };
@@ -355,7 +373,7 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
 
   // ---------- Reservas ----------
   var bookings = BN.bookings();
-  var state = { staff: "Cualquiera", time: null };
+  var state = { staff: "Cualquiera", time: null, pay: null, prov: PROVS.length ? PROVS[0].id : null };
   var svcSel = $("#bkService");
   svcSel.innerHTML = SERVICES.map(function (s) { return '<option value="' + s.id + '">' + esc(s.name) + ' · ' + money(s.price) + ' · ' + s.min + ' min</option>'; }).join("");
 
@@ -371,6 +389,20 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
   dateIn.value = ymd(firstDay);
 
   function svc() { return SERVICES.find(function (s) { return s.id === svcSel.value; }); }
+
+  // Formas de pago que el salón activó en el panel (Pagos)
+  function payModes(price) {
+    var c = PAY.citas, m = [], dep = Math.round(price * PAY.pct / 100);
+    if (ONLINE && c.completo) m.push({ id: "completo", t: "Pagar completo en línea", d: "Tu cita queda pagada.", now: price });
+    if (ONLINE && c.anticipo && dep > 0 && dep < price) m.push({ id: "anticipo", t: "Anticipo del " + PAY.pct + "%", d: "El resto (" + money(price - dep) + ") lo pagas en el salón.", now: dep });
+    if (c.sucursal || !m.length) m.push({ id: "sucursal", t: "Pagar en el salón", d: "Pagas el día de tu cita.", now: 0 });
+    return m;
+  }
+  function curMode(price) { var m = payModes(price); return m.find(function (x) { return x.id === state.pay; }) || m[0]; }
+  function provName(id) { return Pagos.NAMES[id] || id; }
+  function provChips(sel, attr) {
+    return '<span>Pagar con</span><div class="chips" role="group" aria-label="Pagar con">' + PROVS.map(function (p) { return '<button type="button" class="chip" ' + attr + '="' + p.id + '" aria-pressed="' + (p.id === sel) + '">' + p.name + '</button>'; }).join("") + '</div>';
+  }
 
   function busy(staff, date, start, len) { return BN.busy(bookings, staff, date, start, len); }
   // Para "Cualquiera": la primera manicurista libre en ese horario
@@ -407,7 +439,20 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
       "<dt>Manicurista</dt><dd>" + esc(who || state.staff) + "</dd>" +
       "<dt>Día</dt><dd>" + (date && hours ? esc(niceDate(date)) : "—") + "</dd>" +
       '<dt>Hora</dt><dd class="num">' + (state.time != null ? hm(state.time) + " a " + hm(state.time + s.min) : "—") + "</dd>";
-    $("#bkTotal").textContent = money(s.price);
+    var modes = payModes(s.price), mode = curMode(s.price);
+    $("#bkPayStep").hidden = modes.length === 1 && mode.id === "sucursal";
+    $("#bkPay").innerHTML = modes.map(function (m) {
+      return '<button type="button" class="payopt" role="radio" aria-checked="' + (m.id === mode.id) + '" data-pay="' + m.id + '"><b>' + esc(m.t) + '</b><small>' + esc(m.d) + '</small><span class="num">' + (m.now ? money(m.now) : money(s.price)) + '</span></button>';
+    }).join("");
+    $("#bkProv").innerHTML = mode.now ? provChips(state.prov, "data-prov") : "";
+    if (mode.now) {
+      $("#bkSummary").innerHTML += "<dt>Pago</dt><dd>" + esc(mode.id === "anticipo" ? "Anticipo " + PAY.pct + "%" : "Completo") + " · " + provName(state.prov) + "</dd>" +
+        (mode.now < s.price ? '<dt>En el salón</dt><dd class="num">' + money(s.price - mode.now) + '</dd>' : "");
+    }
+    $("#bkTotalLbl").textContent = mode.now ? "A pagar hoy" : "Total";
+    $("#bkTotal").textContent = money(mode.now || s.price);
+    $("#bkSubmit").textContent = mode.now ? "Pagar " + money(mode.now) + " y reservar" : "Confirmar reserva";
+    $("#bkPayNote").textContent = mode.now ? "Pagas de forma segura en " + provName(state.prov) + "; aquí no se guardan datos de tu tarjeta." : "Pagas en el salón. Puedes cancelar sin costo hasta 4 horas antes.";
     renderMine();
   }
 
@@ -424,6 +469,8 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
   dateIn.addEventListener("change", function () { state.time = null; renderBooking(); });
   $("#bkStaff").addEventListener("click", function (e) { var b = e.target.closest("[data-staff]"); if (!b) return; state.staff = b.dataset.staff; renderBooking(); });
   $("#bkSlots").addEventListener("click", function (e) { var b = e.target.closest("[data-time]"); if (!b || b.disabled) return; state.time = +b.dataset.time; renderBooking(); });
+  $("#bkPay").addEventListener("click", function (e) { var b = e.target.closest("[data-pay]"); if (!b) return; state.pay = b.dataset.pay; renderBooking(); });
+  $("#bkProv").addEventListener("click", function (e) { var b = e.target.closest("[data-prov]"); if (!b) return; state.prov = b.dataset.prov; renderBooking(); });
   $("#myBookings").addEventListener("click", function (e) {
     var b = e.target.closest("[data-cancel]"); if (!b) return;
     bookings = BN.bookings(); bookings.forEach(function (x) { if (x.id === b.dataset.cancel) x.status = "cancelada"; }); save("bn_bookings", bookings);
@@ -438,12 +485,77 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
     bookings = BN.bookings();
     var who = freeStaff(dateIn.value, state.time, s.min);
     if (!who) { msg.innerHTML = '<div class="msg">Ese horario se acaba de ocupar. Elige otro.</div>'; renderBooking(); return; }
-    var b = { id: "b" + Date.now(), service: s.id, serviceName: s.name, price: s.price, status: "confirmada", source: "web", staff: who, date: dateIn.value, start: state.time, min: s.min, name: name, phone: phone, notes: $("#bkNotes").value.trim(), mine: true, created: BN.stamp() };
-    bookings.push(b); save("bn_bookings", bookings);
-    msg.innerHTML = '<div class="msg ok"><b>¡Listo, ' + esc(name.split(" ")[0]) + '!</b> Tu cita de ' + esc(s.name.toLowerCase()) + ' quedó apartada el ' + esc(niceDate(b.date)) + ' a las ' + hm(b.start) + ' con ' + esc(who) + '.</div>';
+    var mode = curMode(s.price);
+    var b = { id: "b" + Date.now(), service: s.id, serviceName: s.name, price: s.price, status: "confirmada", source: "web", staff: who, date: dateIn.value, start: state.time, min: s.min, name: name, phone: phone, notes: $("#bkNotes").value.trim(), mine: true, created: BN.stamp(),
+      payment: mode.now ? { mode: mode.id, provider: state.prov, status: "pendiente", due: mode.now, paid: 0 } : { mode: "sucursal" } };
+    if (!save("bn_bookings", bookings.concat([b]))) { msg.innerHTML = '<div class="msg">No se pudo guardar la cita. Intenta de nuevo.</div>'; return; }
+    bookings.push(b);
     state.time = null; $("#bkNotes").value = "";
+    if (mode.now) { msg.innerHTML = ""; renderBooking(); payBooking(b); return; }
+    msg.innerHTML = '<div class="msg ok"><b>¡Listo, ' + esc(name.split(" ")[0]) + '!</b> Tu cita de ' + esc(s.name.toLowerCase()) + ' quedó apartada el ' + esc(niceDate(b.date)) + ' a las ' + hm(b.start) + ' con ' + esc(who) + '.</div>';
     renderBooking();
   });
+
+  // ---------- Cobro en línea ----------
+  function bookingItems(b) {
+    return [{ nombre: b.serviceName + (b.payment.mode === "anticipo" ? " · anticipo " + Math.round(b.payment.due / b.price * 100) + "%" : ""), cantidad: 1, precio: b.payment.due }];
+  }
+  function orderItems(o) {
+    var it = o.items.map(function (i) { return { nombre: i.name, cantidad: i.q, precio: i.price }; });
+    if (o.shipping) it.push({ nombre: "Envío a domicilio", cantidad: 1, precio: o.shipping });
+    return it;
+  }
+  function payError(err, retry) {
+    Pagos.modal({ title: "No se pudo iniciar el pago", html: "<p>" + esc(err.message || err) + "</p>", buttons: [{ label: "Intentar de nuevo", primary: true, onClick: retry }, { label: "Cerrar" }] });
+  }
+  function payBooking(b) {
+    var btn = $("#bkSubmit"); btn.disabled = true;
+    Pagos.start({ prov: b.payment.provider, ref: b.id, items: bookingItems(b), name: b.name, desc: b.serviceName + " · " + niceDate(b.date) + " · " + hm(b.start) })
+      .then(function (res) { btn.disabled = false; finishPay(b.id, res); })
+      .catch(function (err) { btn.disabled = false; payError(err, function () { payBooking(b); }); });
+  }
+  function payOrder(o) {
+    Pagos.start({ prov: o.payment.provider, ref: o.id, items: orderItems(o), name: o.name, desc: "Pedido " + o.id })
+      .then(function (res) { finishPay(o.id, res); })
+      .catch(function (err) { payError(err, function () { payOrder(o); }); });
+  }
+  function setPayLater(kind, id) {
+    var key = kind === "b" ? "bn_bookings" : "bn_orders", arr = kind === "b" ? BN.bookings() : BN.orders();
+    arr.forEach(function (x) { if (x.id === id) x.payment = { mode: "sucursal" }; });
+    save(key, arr); bookings = BN.bookings();
+  }
+  function cancelUnpaid(kind, id) {
+    if (kind === "b") { bookings = BN.bookings(); bookings.forEach(function (x) { if (x.id === id) x.status = "cancelada"; }); save("bn_bookings", bookings); return; }
+    var orders = BN.orders(), o = orders.find(function (x) { return x.id === id; }); if (!o || o.status === "cancelado") return;
+    o.status = "cancelado"; save("bn_orders", orders);
+    var all = BN.products();
+    o.items.forEach(function (i) { all.forEach(function (p) { if (p.id === i.id && p.stock != null && p.stock !== "") p.stock = +p.stock + i.q; }); });
+    save("bn_products", all); refreshProducts();
+    if (ordered && ordered.id === id) { ordered = null; renderCart(); }
+  }
+  /** Muestra el resultado del cobro y deja la cita o el pedido al día. */
+  function finishPay(ref, res) {
+    var r = Pagos.apply(ref, res);
+    bookings = BN.bookings(); renderBooking(); renderCart();
+    if (!r) { Pagos.modal({ title: "No encontramos ese cobro", html: "<p>Si ya pagaste, escríbenos por WhatsApp con tu comprobante.</p>", buttons: [{ label: "Cerrar", primary: true }] }); return; }
+    var x = r.rec, p = x.payment, isB = r.kind === "b";
+    if (p.status === "pagado") {
+      var rest = isB ? x.price - p.paid : 0;
+      Pagos.modal({
+        title: isB ? (rest > 0 ? "¡Anticipo recibido!" : "¡Cita pagada!") : "¡Pago recibido!",
+        html: isB ? "<p>Tu cita de " + esc(x.serviceName.toLowerCase()) + " quedó confirmada el " + esc(niceDate(x.date)) + " a las " + hm(x.start) + " con " + esc(x.staff) + ".</p><p>Pagaste <b class=\"num\">" + money(p.paid) + "</b> con " + provName(p.provider) + "." + (rest > 0 ? " Te quedan <b class=\"num\">" + money(rest) + "</b> para pagar en el salón." : "") + "</p>"
+          : "<p>Pedido <b class=\"num\">" + esc(x.id) + "</b> pagado: <b class=\"num\">" + money(p.paid) + "</b> con " + provName(p.provider) + ".</p><p>" + (x.delivery === "recoger" ? "Te avisamos por WhatsApp cuando esté listo para recoger." : "Te escribimos por WhatsApp para coordinar el envío.") + "</p>",
+        buttons: [{ label: "Listo", primary: true }]
+      });
+      if (isB) $("#bkMsg").innerHTML = '<div class="msg ok"><b>Cita pagada.</b> ' + esc(niceDate(x.date)) + ' a las ' + hm(x.start) + ' con ' + esc(x.staff) + '.</div>';
+      return;
+    }
+    var later = isB ? PAY.citas.sucursal : PAY.tienda.sucursal;
+    var btns = [{ label: "Intentar de nuevo", primary: true, onClick: function () { isB ? payBooking(x) : payOrder(x); } }];
+    if (later) btns.push({ label: isB ? "Pagar en el salón" : "Pagar al recoger o recibir", onClick: function () { setPayLater(r.kind, x.id); toast(isB ? "Listo: pagas el día de tu cita" : "Listo: pagas al recoger o recibir"); } });
+    btns.push({ label: isB ? "Cancelar la cita" : "Cancelar el pedido", onClick: function () { cancelUnpaid(r.kind, x.id); renderBooking(); toast(isB ? "Cita cancelada" : "Pedido cancelado"); } });
+    Pagos.modal({ title: "El pago no se completó", html: "<p>" + (isB ? "Tu horario sigue apartado." : "Tu pedido " + esc(x.id) + " sigue apartado.") + " Puedes intentar de nuevo" + (later ? (isB ? " o pagar en el salón." : " o pagar al recoger o recibir.") : ".") + "</p>", buttons: btns });
+  }
 
   // ---------- Tienda ----------
   var cart = load("bn_cart", {});
@@ -470,13 +582,17 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
   });
 
   var delivery = "recoger", ordered = null;
+  var shopModes = (function () { var m = []; if (ONLINE && PAY.tienda.linea) m.push("linea"); if (PAY.tienda.sucursal || !m.length) m.push("sucursal"); return m; })();
+  var shopPay = shopModes[0], shopProv = state.prov;
+  function refreshProducts() { PRODUCTS = BN.products().filter(function (p) { return p.active !== false; }); PRODUCTS.forEach(function (p) { p.img = BN.productImg(p); }); renderShop(); }
   function cartItems() { return Object.keys(cart).map(function (id) { var p = PRODUCTS.find(function (x) { return x.id === id; }); return p && cart[id] > 0 ? { p: p, q: cart[id] } : null; }).filter(Boolean); }
   function renderCart() {
     var items = cartItems(), n = items.reduce(function (a, i) { return a + i.q; }, 0);
     $("#cartCount").textContent = n;
     if (ordered) {
-      $("#lines").innerHTML = '<div class="empty"><h2 style="color:var(--ink);margin-bottom:10px">¡Gracias por tu compra!</h2><p>Pedido <b class="num">' + ordered.id + '</b> por <b class="num">' + money(ordered.total) + '</b>.<br>' +
-        (ordered.delivery === "recoger" ? "Te avisamos por WhatsApp cuando esté listo para recoger en el salón." : "Te escribimos por WhatsApp para coordinar el pago y el envío.") + '</p></div>';
+      var op = (BN.orders().find(function (o) { return o.id === ordered.id; }) || ordered).payment || {}, paid = op.status === "pagado";
+      $("#lines").innerHTML = '<div class="empty"><h2 style="color:var(--ink);margin-bottom:10px">¡Gracias por tu compra!</h2><p>Pedido <b class="num">' + ordered.id + '</b> por <b class="num">' + money(ordered.total) + '</b>' + (paid ? ", pagado con " + provName(op.provider) : "") + '.<br>' +
+        (ordered.delivery === "recoger" ? "Te avisamos por WhatsApp cuando esté listo para recoger en el salón." : paid ? "Te escribimos por WhatsApp para coordinar el envío." : "Te escribimos por WhatsApp para coordinar el pago y el envío.") + '</p></div>';
       $("#cartFoot").innerHTML = '<button class="btn btn-primary" type="button" id="keepShopping">Seguir comprando</button>';
       return;
     }
@@ -491,6 +607,8 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
     }).join("");
     var sub = items.reduce(function (a, i) { return a + i.p.price * i.q; }, 0);
     var ship = delivery === "envio" && sub < FREE_FROM ? SHIPPING : 0;
+    // Al cambiar entrega o pago se redibuja el formulario: conserva lo ya escrito
+    var keep = ["coName", "coPhone", "coAddr"].map(function (id) { var el = document.getElementById(id); return el ? el.value : ""; });
     $("#cartFoot").innerHTML =
       '<div class="totals"><span>Subtotal</span><span class="num">' + money(sub) + '</span></div>' +
       '<div class="totals"><span>' + (delivery === "envio" ? "Envío" + (ship ? "" : " (gratis desde " + money(FREE_FROM) + ")") : "Recoger en el salón") + '</span><span class="num">' + (ship ? money(ship) : "Gratis") + '</span></div>' +
@@ -500,7 +618,10 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
       '<input id="coName" placeholder="Nombre" autocomplete="name" aria-label="Nombre">' +
       '<input id="coPhone" type="tel" placeholder="WhatsApp (10 dígitos)" autocomplete="tel" aria-label="WhatsApp">' +
       (delivery === "envio" ? '<input id="coAddr" placeholder="Dirección de entrega" autocomplete="street-address" aria-label="Dirección">' : "") +
-      '<div id="coMsg"></div><button class="btn btn-primary" type="submit">Hacer pedido · <span class="num">' + money(sub + ship) + '</span></button></form>';
+      (shopModes.length > 1 || shopPay === "linea" ? '<div class="lbl">Pago</div><div class="chips" role="group" aria-label="Pago">' + shopModes.map(function (m) { return '<button type="button" class="chip" data-spay="' + m + '" aria-pressed="' + (m === shopPay) + '">' + (m === "linea" ? "Pagar en línea" : delivery === "envio" ? "Pagar al recibir" : "Pagar al recoger") + '</button>'; }).join("") + '</div>' : "") +
+      (shopPay === "linea" ? '<div class="prov">' + provChips(shopProv, "data-sprov") + '</div>' : "") +
+      '<div id="coMsg"></div><button class="btn btn-primary" type="submit">' + (shopPay === "linea" ? "Pagar" : "Hacer pedido") + ' · <span class="num">' + money(sub + ship) + '</span></button></form>';
+    ["coName", "coPhone", "coAddr"].forEach(function (id, i) { var el = document.getElementById(id); if (el && keep[i]) el.value = keep[i]; });
   }
   $("#lines").addEventListener("click", function (e) {
     var inc = e.target.closest("[data-inc]"), dec = e.target.closest("[data-dec]");
@@ -512,6 +633,8 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
   $("#cartFoot").addEventListener("click", function (e) {
     var d = e.target.closest("[data-del]");
     if (d) { delivery = d.dataset.del; renderCart(); }
+    var sp = e.target.closest("[data-spay]"); if (sp) { shopPay = sp.dataset.spay; renderCart(); }
+    var pv = e.target.closest("[data-sprov]"); if (pv) { shopProv = pv.dataset.sprov; renderCart(); }
     if (e.target.closest("#keepShopping")) { ordered = null; closeCart(); renderCart(); }
   });
   $("#cartFoot").addEventListener("submit", function (e) {
@@ -522,14 +645,15 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
     var items = cartItems(), sub = items.reduce(function (a, i) { return a + i.p.price * i.q; }, 0);
     var ship = delivery === "envio" && sub < FREE_FROM ? SHIPPING : 0;
     var orders = BN.orders(), real = orders.filter(function (o) { return !o.demo; }).length;
-    ordered = { id: "BN-" + String(1001 + real), subtotal: sub, shipping: ship, total: sub + ship, delivery: delivery, name: name, phone: phone, address: addr, status: "nuevo", items: items.map(function (i) { return { id: i.p.id, name: i.p.name, q: i.q, price: i.p.price }; }), created: BN.stamp() };
-    orders.push(ordered); save("bn_orders", orders);
+    ordered = { id: "BN-" + String(1001 + real), subtotal: sub, shipping: ship, total: sub + ship, delivery: delivery, name: name, phone: phone, address: addr, status: "nuevo", items: items.map(function (i) { return { id: i.p.id, name: i.p.name, q: i.q, price: i.p.price }; }), created: BN.stamp(),
+      payment: shopPay === "linea" ? { mode: "linea", provider: shopProv, status: "pendiente", due: sub + ship, paid: 0 } : { mode: "sucursal" } };
+    if (!save("bn_orders", orders.concat([ordered]))) { ordered = null; $("#coMsg").innerHTML = '<div class="msg" style="margin:0">No se pudo guardar el pedido. Intenta de nuevo.</div>'; return; }
     // Descuenta inventario
     var all = BN.products();
     items.forEach(function (i) { all.forEach(function (p) { if (p.id === i.p.id && p.stock != null && p.stock !== "") p.stock = Math.max(0, +p.stock - i.q); }); });
-    save("bn_products", all);
-    PRODUCTS = all.filter(function (p) { return p.active !== false; }); PRODUCTS.forEach(function (p) { p.img = BN.productImg(p); }); renderShop();
+    save("bn_products", all); refreshProducts();
     cart = {}; save("bn_cart", cart); renderCart();
+    if (ordered.payment.mode === "linea") payOrder(ordered);
   });
 
   function openCart() { $("#drawer").hidden = false; $("#scrim").hidden = false; $("#cartClose").focus(); }
@@ -541,6 +665,18 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
 
   $("#yr").textContent = new Date().getFullYear();
   renderBooking(); renderShop(); renderCart();
+
+  // Regreso desde Mercado Pago o Stripe: se confirma con el proveedor antes de marcar como pagado
+  var back = Pagos.readReturn();
+  if (back) {
+    if (back.pago === "cancelado" || !back.id) finishPay(back.ref, { pagado: false });
+    else {
+      Pagos.modal({ title: "Confirmando tu pago…", html: "<p>Un momento, estamos revisando el pago con " + provName(back.prov) + ".</p>" });
+      Pagos.verify(back.prov, back.id, back.ref)
+        .then(function (r) { finishPay(back.ref, { pagado: !!r.pagado, monto: r.monto, id: back.id }); })
+        .catch(function (err) { Pagos.modal({ title: "No pudimos confirmar el pago", html: "<p>" + esc(err.message) + "</p><p>Si se te hizo el cargo, escríbenos por WhatsApp con tu comprobante.</p>", buttons: [{ label: "Cerrar", primary: true }] }); });
+    }
+  }
 })();
 </script>
 </body>

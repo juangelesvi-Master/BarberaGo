@@ -158,6 +158,19 @@ label.f { display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: var
 .st-completada, .st-entregado { background: var(--ok-bg); color: var(--ok); }
 .st-no-asistio, .st-nuevo { background: var(--warn-bg); color: var(--warn); }
 .st-cancelada, .st-cancelado { background: var(--bg); color: var(--muted); }
+.pg-ok { background: var(--ok-bg); color: var(--ok); }
+.pg-wait { background: var(--warn-bg); color: var(--warn); }
+.pg-bad { background: var(--bad-bg, var(--warn-bg)); color: var(--bad); }
+.pay-cell { display: grid; gap: 4px; justify-items: end; }
+.checks { display: grid; gap: 8px; }
+.checks label { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: start; border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; }
+.checks label:has(input:checked) { border-color: var(--lacquer); background: var(--blush); }
+.checks input { margin-top: 3px; width: auto; }
+.checks span { grid-column: 2; font-size: 13px; color: var(--muted); }
+.checks .pct { grid-column: 2; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.checks .pct input { width: 80px; margin: 0; }
+.steps-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+.steps-list code { font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 5px; word-break: break-all; }
 select.status { width: auto; padding: 4px 8px; font-size: 13px; font-weight: 600; border-radius: 999px; }
 
 /* Tablas */
@@ -280,6 +293,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       <button type="button" data-go="ventas">Ventas <span class="badge num" id="bdgVentas" hidden></span></button>
       <button type="button" data-go="productos">Productos</button>
       <button type="button" data-go="horario">Horario y servicios</button>
+      <button type="button" data-go="pagos">Pagos en línea</button>
       <button type="button" data-go="impresora">Impresora</button>
     </nav>
     <div class="foot">
@@ -498,6 +512,62 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
         </div>
       </div>
     </section>
+    <!-- PAGOS -->
+    <section data-view="pagos" hidden>
+      <div class="page-head">
+        <div><h1>Pagos en línea</h1><p>Elige cómo pueden pagar tus clientas sus citas y sus compras de la tienda.</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="stack">
+          <div class="card">
+            <h2>Citas</h2>
+            <div class="checks">
+              <label><input type="checkbox" id="pgFull"><b>Pagar completo en línea</b><span>La clienta paga todo el servicio al reservar.</span></label>
+              <label><input type="checkbox" id="pgDep"><b>Pagar anticipo</b><span>Aparta su cita con una parte; el resto lo paga en el salón.</span>
+                <span class="pct"><input type="number" id="pgPct" min="10" max="90" step="5" aria-label="Porcentaje de anticipo"> % del servicio</span></label>
+              <label><input type="checkbox" id="pgStore"><b>Pagar en sucursal</b><span>Reserva sin pagar y paga el día de su cita.</span></label>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Tienda</h2>
+            <div class="checks">
+              <label><input type="checkbox" id="pgShopOnline"><b>Pagar en línea</b><span>Paga el pedido al terminar la compra.</span></label>
+              <label><input type="checkbox" id="pgShopLater"><b>Pagar al recoger o recibir</b><span>Hace el pedido y paga en el salón o al recibirlo.</span></label>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Con qué se cobra</h2>
+            <div class="checks">
+              <label><input type="checkbox" id="pgMp"><b>Mercado Pago</b><span>Tarjeta, OXXO, transferencia y saldo de Mercado Pago.</span></label>
+              <label><input type="checkbox" id="pgStripe"><b>Stripe</b><span>Tarjeta de crédito o débito, Apple Pay y Google Pay.</span></label>
+            </div>
+            <div class="row-actions"><button type="button" class="btn btn-primary" id="pgSave">Guardar</button><span class="hint" id="pgErr"></span></div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="card">
+            <h2>Conexión <span class="conn" id="pgState"></span></h2>
+            <div class="checks" style="margin-bottom:12px">
+              <label><input type="checkbox" id="pgDemo"><b>Modo de prueba</b><span>Simula el cobro sin cobrar de verdad. Quítalo cuando la función de pagos esté lista.</span></label>
+            </div>
+            <div style="display:grid;gap:12px">
+              <label class="f" for="pgUrl">Dirección de la función de pagos<input id="pgUrl" placeholder="https://TU-PROYECTO.supabase.co/functions/v1/beatynails-pagos" inputmode="url"></label>
+              <label class="f" for="pgKey">Llave pública (anon o publishable) de Supabase<input id="pgKey" placeholder="sb_publishable_…"></label>
+            </div>
+            <div class="row-actions"><button type="button" class="btn btn-line" id="pgTest">Probar conexión</button><span class="hint" id="pgTestMsg"></span></div>
+          </div>
+          <div class="card">
+            <h2>Cómo conectar tus cuentas</h2>
+            <ol class="steps-list">
+              <li>Copia tu <b>Access Token</b> de Mercado Pago (Tus integraciones → Credenciales) y tu <b>llave secreta</b> de Stripe (Desarrolladores → Llaves de API). Para probar usa las de prueba (<code>TEST-…</code> y <code>sk_test_…</code>).</li>
+              <li>Guárdalas como secretos de Supabase, nunca en esta página:<br><code>supabase secrets set BN_MP_ACCESS_TOKEN=… BN_STRIPE_SECRET_KEY=… BN_ORIGENES=https://tu-dominio.com</code></li>
+              <li>Publica la función: <code>supabase functions deploy beatynails-pagos --no-verify-jwt</code></li>
+              <li>Pega aquí su dirección y la llave pública, toca <b>Probar conexión</b> y quita el modo de prueba.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
     <!-- IMPRESORA -->
     <section data-view="impresora" hidden>
       <div class="page-head">
@@ -562,6 +632,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
 
 <script src="datos.js"></script>
 <script src="ticket.js"></script>
+<script src="pagos.js"></script>
 <script>
 (function () {
   BN.seed();
@@ -590,13 +661,28 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     BN.sales().forEach(function (v) {
       if (v.status !== "pagada" || !pred(v.created.slice(0, 10))) return;
       var f = v.subtotal ? v.total / v.subtotal : 0;
-      v.items.forEach(function (i) { var amt = i.q * i.price * f; if (i.type === "servicio") r.svc += amt; else r.prod += amt; });
+      v.items.forEach(function (i) { var amt = i.q * i.price * f; if (i.type === "servicio" || i.type === "anticipo") r.svc += amt; else r.prod += amt; });
     });
-    (bookings || BN.bookings()).forEach(function (b) { if (b.status === "completada" && !b.saleId && pred(b.date)) r.svc += bPrice(b); });
+    // Lo pagado en línea cuenta el día del pago; en el salón solo se suma lo que faltaba
+    (bookings || BN.bookings()).forEach(function (b) {
+      var paid = onlinePaid(b);
+      if (paid && b.status !== "cancelada" && pred(b.payment.date.slice(0, 10))) r.svc += paid;
+      if (b.status === "completada" && !b.saleId && pred(b.date)) r.svc += Math.max(0, bPrice(b) - paid);
+    });
     (orders || BN.orders()).forEach(function (o) { if (o.status !== "cancelado" && pred(oDate(o))) r.prod += o.total; });
     return r;
   }
   function isPaid(b) { return !!b.saleId; }
+  function onlinePaid(x) { var p = x.payment; return p && p.status === "pagado" ? +p.paid || 0 : 0; }
+  // Estado del cobro en línea de una cita o pedido; avisa si lo pagado no coincide con lo esperado
+  function payPill(x) {
+    var p = x.payment; if (!p || p.mode === "sucursal") return "";
+    var prov = Pagos.NAMES[p.provider] || p.provider || "", st = p.status || "pendiente";
+    var lbl = st === "pagado" ? (p.mode === "anticipo" ? "Anticipo " + money(p.paid) : "Pagado en línea") : st === "rechazado" ? "Pago rechazado" : "Pago pendiente";
+    var html = '<span class="pill ' + (st === "pagado" ? "pg-ok" : st === "rechazado" ? "pg-bad" : "pg-wait") + '" title="' + esc(prov + (p.id ? " · " + p.id : "")) + '">' + lbl + '</span>';
+    if (st === "pagado" && Math.abs((+p.paid || 0) - (+p.due || 0)) >= 1) html += '<span class="pill pg-bad" title="Se esperaban ' + money(p.due) + '">Pagó ' + money(p.paid) + ' de ' + money(p.due) + '</span>';
+    return html;
+  }
   function bookingSort(a, b) { return (a.date + hm(a.start)).localeCompare(b.date + hm(b.start)); }
 
   // Botones de dos pasos (en lugar de confirm(), que el navegador puede bloquear)
@@ -626,7 +712,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     $("#bdgCitas").hidden = !todayPending; $("#bdgCitas").textContent = todayPending;
     $("#bdgVentas").hidden = !newOrders; $("#bdgVentas").textContent = newOrders;
     $("#demoNote").hidden = !bookings.some(function (b) { return b.demo; }) && !orders.some(function (o) { return o.demo; });
-    ({ resumen: renderResumen, caja: renderCaja, citas: renderCitas, ventas: renderVentas, productos: renderProductos, horario: renderHorario, impresora: renderImpresora })[current]();
+    ({ resumen: renderResumen, caja: renderCaja, citas: renderCitas, ventas: renderVentas, productos: renderProductos, horario: renderHorario, pagos: renderPagos, impresora: renderImpresora })[current]();
   }
   // Si la página está abierta en otra pestaña, refleja reservas y pedidos nuevos
   window.addEventListener("storage", function () { if (!$("#drawer").hidden) return; render(); });
@@ -664,7 +750,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     var today = bookings.filter(function (b) { return b.date === TODAY && b.status !== "cancelada"; }).sort(bookingSort);
     $("#agendaCount").textContent = today.length ? today.length + (today.length === 1 ? " cita" : " citas") : "";
     $("#agenda").innerHTML = today.length ? today.map(function (b) {
-      return '<li><span class="time num">' + hm(b.start) + '</span><span class="who"><b>' + esc(b.name) + '</b><span>' + esc(svcName(b)) + ' · ' + esc(b.staff) + '</span></span><span class="acts">' +
+      return '<li><span class="time num">' + hm(b.start) + '</span><span class="who"><b>' + esc(b.name) + '</b><span>' + esc(svcName(b)) + ' · ' + esc(b.staff) + '</span>' + (onlinePaid(b) && !isPaid(b) ? '<span>' + payPill(b) + '</span>' : "") + '</span><span class="acts">' +
         (b.status === "confirmada" ? '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button><button type="button" class="linkbtn danger" data-quick="' + b.id + '" data-st="no-asistio">No vino</button>' : pill(isPaid(b) ? "completada" : b.status, isPaid(b) ? { completada: "Cobrada" } : B_STATUS) + (b.status === "completada" ? (isPaid(b) ? "" : '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button>') + '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button>' : "")) + '</span></li>';
     }).join("") : '<li class="empty" style="display:block">No hay citas para hoy.</li>';
 
@@ -672,7 +758,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     var pend = orders.filter(function (o) { return o.status === "nuevo" || o.status === "listo"; }).sort(function (a, b) { return a.created.localeCompare(b.created); });
     $("#pendOrders").innerHTML = pend.length ? pend.slice(0, 6).map(function (o) {
       var next = o.status === "nuevo" ? ["listo", "Marcar listo"] : ["entregado", "Entregado"];
-      return '<li><span class="time num" style="font-size:13px">' + esc(o.id) + '</span><span class="who"><b>' + esc(o.name) + '</b><span class="num">' + money(o.total) + ' · ' + (o.delivery === "envio" ? "Envío" : "Recoge en salón") + '</span></span><span class="acts"><button type="button" class="linkbtn" data-tickete="' + esc(o.id) + '">Ticket</button><button type="button" class="linkbtn" data-oquick="' + esc(o.id) + '" data-st="' + next[0] + '">' + next[1] + '</button></span></li>';
+      return '<li><span class="time num" style="font-size:13px">' + esc(o.id) + '</span><span class="who"><b>' + esc(o.name) + '</b><span class="num">' + money(o.total) + ' · ' + (o.delivery === "envio" ? "Envío" : "Recoge en salón") + '</span>' + (o.payment && o.payment.mode === "linea" ? '<span>' + payPill(o) + '</span>' : "") + '</span><span class="acts"><button type="button" class="linkbtn" data-tickete="' + esc(o.id) + '">Ticket</button><button type="button" class="linkbtn" data-oquick="' + esc(o.id) + '" data-st="' + next[0] + '">' + next[1] + '</button></span></li>';
     }).join("") + (pend.length > 6 ? '<li style="display:block"><button type="button" class="linkbtn" data-goto="ventas">Ver los ' + pend.length + ' pedidos</button></li>' : "") : '<li class="empty" style="display:block">Todo entregado.</li>';
 
     // Más vendidos (30 días)
@@ -784,7 +870,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       if (b.date !== lastDate) { lastDate = b.date; html += '<tr class="day"><td colspan="7">' + esc(BN.niceDate(b.date)) + (b.date === TODAY ? " · hoy" : "") + '</td></tr>'; }
       html += '<tr class="' + (b.status === "cancelada" ? "off" : "") + '"><td class="num"><b>' + hm(b.start) + '</b><br><span class="muted">' + hm(b.start + b.min) + '</span></td>' +
         '<td class="cell-main"><b>' + esc(b.name) + '</b><span class="num">' + esc(b.phone || "") + (b.notes ? " · " + esc(b.notes) : "") + '</span></td>' +
-        '<td>' + esc(svcName(b)) + '</td><td>' + esc(b.staff) + '</td><td class="r num">' + money(bPrice(b)) + '</td>' +
+        '<td>' + esc(svcName(b)) + '</td><td>' + esc(b.staff) + '</td><td class="r num"><div class="pay-cell">' + money(bPrice(b)) + payPill(b) + '</div></td>' +
         '<td>' + statusSelect("bstatus", b.id, b.status || "confirmada", B_STATUS) + '</td>' +
         '<td><div class="actions">' + (b.status !== "cancelada" && b.status !== "no-asistio" && !isPaid(b) ? '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button>' : isPaid(b) ? '<span class="pill st-completada">Cobrada</span>' : "") + '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button><button type="button" class="linkbtn" data-editb="' + esc(b.id) + '">Cambiar</button><button type="button" class="linkbtn danger" data-delb="' + esc(b.id) + '">Eliminar</button></div></td></tr>';
     });
@@ -906,7 +992,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       return head +
         '<td class="cell-main"><b>' + esc(o.name) + '</b><span class="num">' + esc(o.phone || "") + '</span></td><td style="font-size:13px">' + items + '</td>' +
         '<td>En línea<br><span class="muted" style="font-size:13px">' + (o.delivery === "envio" ? "Envío" + (o.address ? " · " + esc(o.address) : "") : "Recoge en salón") + '</span></td>' +
-        '<td class="r num"><b>' + money(o.total) + '</b></td><td>' + statusSelect("ostatus", o.id, o.status || "nuevo", O_STATUS) + '</td><td><button type="button" class="linkbtn" data-tickete="' + esc(o.id) + '">Ticket</button></td></tr>';
+        '<td class="r num"><div class="pay-cell"><b>' + money(o.total) + '</b>' + payPill(o) + '</div></td><td>' + statusSelect("ostatus", o.id, o.status || "nuevo", O_STATUS) + '</td><td><button type="button" class="linkbtn" data-tickete="' + esc(o.id) + '">Ticket</button></td></tr>';
     }).join("") : '<tr><td colspan="7" class="empty">No hay ventas con estos filtros.</td></tr>';
   }
   $("#orRows").addEventListener("change", function (e) {
@@ -1040,6 +1126,53 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     if (saveOr("bn_settings", set)) toast("Envíos guardados");
   });
 
+  // ---------- Pagos en línea ----------
+  function renderPagos() {
+    var c = BN.settings().pagos;
+    $("#pgFull").checked = c.citas.completo; $("#pgDep").checked = c.citas.anticipo; $("#pgStore").checked = c.citas.sucursal; $("#pgPct").value = c.pct;
+    $("#pgShopOnline").checked = c.tienda.linea; $("#pgShopLater").checked = c.tienda.sucursal;
+    $("#pgMp").checked = c.mp; $("#pgStripe").checked = c.stripe; $("#pgDemo").checked = c.demo;
+    $("#pgUrl").value = c.url; $("#pgKey").value = c.key; $("#pgErr").textContent = ""; $("#pgTestMsg").textContent = "";
+    pagosState();
+  }
+  function pagosState() {
+    var demo = $("#pgDemo").checked, url = $("#pgUrl").value.trim();
+    $("#pgState").textContent = demo ? "Modo de prueba" : url ? "Cobro real" : "Sin configurar";
+    $("#pgState").style.color = demo ? "var(--warn)" : url ? "var(--ok)" : "var(--muted)";
+  }
+  document.querySelector('[data-view="pagos"]').addEventListener("input", pagosState);
+  $("#pgSave").addEventListener("click", function () {
+    var pct = Math.round(+$("#pgPct").value), url = $("#pgUrl").value.trim(), demo = $("#pgDemo").checked;
+    var mp = $("#pgMp").checked, stripe = $("#pgStripe").checked;
+    var full = $("#pgFull").checked, dep = $("#pgDep").checked, store = $("#pgStore").checked, shopOn = $("#pgShopOnline").checked, shopLater = $("#pgShopLater").checked;
+    var err = !full && !dep && !store ? "Deja al menos una forma de pago para las citas."
+      : !shopOn && !shopLater ? "Deja al menos una forma de pago para la tienda."
+      : dep && !(pct >= 10 && pct <= 90) ? "El anticipo debe ser entre 10% y 90%."
+      : (full || dep || shopOn) && !mp && !stripe ? "Activa Mercado Pago o Stripe para cobrar en línea."
+      : (full || dep || shopOn) && !demo && !/^https:\/\/\S+$/.test(url) ? "Pega la dirección de la función de pagos (empieza con https://) o deja el modo de prueba."
+      : "";
+    $("#pgErr").textContent = err; $("#pgErr").style.color = err ? "var(--bad)" : "";
+    if (err) return;
+    var set = BN.settings();
+    set.pagos = { url: url, key: $("#pgKey").value.trim(), demo: demo, mp: mp, stripe: stripe, citas: { completo: full, anticipo: dep, sucursal: store }, pct: pct >= 10 && pct <= 90 ? pct : set.pagos.pct, tienda: { linea: shopOn, sucursal: shopLater } };
+    if (saveOr("bn_settings", set)) toast("Pagos guardados");
+  });
+  $("#pgTest").addEventListener("click", function () {
+    var url = $("#pgUrl").value.trim(), key = $("#pgKey").value.trim(), msg = $("#pgTestMsg");
+    msg.style.color = "";
+    if (!/^https?:\/\/\S+$/.test(url)) { msg.textContent = "Pega primero la dirección de la función."; return; }
+    msg.textContent = "Probando…";
+    var h = { "Content-Type": "application/json" }; if (key) { h.apikey = key; h.Authorization = "Bearer " + key; }
+    fetch(url, { method: "POST", headers: h, body: JSON.stringify({ accion: "estado" }) })
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || d.message || "respondió " + r.status); return d; }); })
+      .then(function (d) {
+        var ok = [d.mp ? "Mercado Pago" : null, d.stripe ? "Stripe" : null].filter(Boolean);
+        msg.style.color = ok.length ? "var(--ok)" : "var(--warn)";
+        msg.textContent = ok.length ? "Conectado: " + ok.join(" y ") + " · " + (d.moneda || "MXN") : "La función responde, pero no tiene llaves guardadas.";
+      })
+      .catch(function (e) { msg.style.color = "var(--bad)"; msg.textContent = "No se pudo conectar: " + e.message; });
+  });
+
   function renderStaff() {
     $("#staffList").innerHTML = draftStaff.length ? draftStaff.map(function (n, i) { return '<span>' + esc(n) + '<button type="button" data-rmstaff="' + i + '" aria-label="Quitar a ' + esc(n) + '">×</button></span>'; }).join("") : '<p class="hint">Agrega al menos una manicurista para recibir reservas.</p>';
   }
@@ -1135,6 +1268,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     $("#posBooking").hidden = !bk;
     if (bk) $("#posBooking").innerHTML = '<span>Cobrando la cita de <b>' + esc(bk.name) + '</b> · ' + esc(BN.niceDate(bk.date)) + ' ' + hm(bk.start) + '</span><button type="button" class="linkbtn" id="posUnlink">Quitar</button>';
     $("#posLines").innerHTML = pos.lines.length ? pos.lines.map(function (l, i) {
+      if (l.type === "anticipo") return '<div class="pos-line"><div><div class="nm">' + esc(l.name) + '</div><div class="unit muted">Ya cobrado</div></div><div></div><div class="amt num">' + money(l.price) + '</div></div>';
       return '<div class="pos-line"><div><div class="nm">' + esc(l.name) + '</div><div class="unit"><input type="number" min="0" step="1" value="' + l.price + '" data-price="' + i + '" aria-label="Precio de ' + esc(l.name) + '"> c/u</div></div>' +
         '<div class="qty"><button type="button" data-dec="' + i + '" aria-label="Quitar uno">−</button><span class="num">' + l.q + '</span><button type="button" data-inc="' + i + '" aria-label="Agregar uno">+</button></div>' +
         '<div class="amt num">' + money(l.q * l.price) + '</div></div>';
@@ -1207,7 +1341,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   $("#posReceived").addEventListener("input", function () { pos.received = this.value; renderPosTotals(); });
   $("#posQuick").addEventListener("click", function (e) { var b = e.target.closest("[data-recv]"); if (!b) return; pos.received = b.dataset.recv; $("#posReceived").value = pos.received; renderPosTotals(); });
   $("#posClear").addEventListener("click", function () { var tab = pos.tab; pos = newPos(); pos.tab = tab; $("#posReceived").value = ""; renderCaja(); });
-  $("#posForm").addEventListener("click", function (e) { if (e.target.closest("#posUnlink")) { pos.bookingId = null; renderPosCart(); } });
+  $("#posForm").addEventListener("click", function (e) { if (e.target.closest("#posUnlink")) { pos.bookingId = null; pos.lines = pos.lines.filter(function (l) { return l.type !== "anticipo"; }); renderPosCart(); } });
   $("#posDone").addEventListener("click", function (e) { if (e.target.closest("#posNew")) { var tab = pos.tab; pos = newPos(); pos.tab = tab; $("#posReceived").value = ""; renderCaja(); $("#posSearch").focus(); } });
   function posError(m) { $("#posErr").textContent = m; $("#posErr").hidden = false; }
 
@@ -1250,6 +1384,8 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     if (isPaid(b)) { toast("Esta cita ya está cobrada"); return; }
     pos = newPos(); pos.tab = "productos";
     pos.lines = [{ type: "servicio", id: b.service, name: svcName(b), price: bPrice(b), q: 1 }];
+    var paid = onlinePaid(b);
+    if (paid) pos.lines.push({ type: "anticipo", id: "pago-" + b.id, name: (paid >= bPrice(b) ? "Pagado en línea" : "Anticipo pagado en línea") + " (" + (Pagos.NAMES[b.payment.provider] || "") + ")", price: -paid, q: 1 });
     pos.name = b.name; pos.staff = b.staff; pos.bookingId = b.id;
     $("#posReceived").value = "";
     closeDrawer(); go("caja");

@@ -53,8 +53,18 @@
     L.push({ lr: ["Subtotal", BN.money(sub)] });
     if (o.delivery === "envio") L.push({ lr: ["Envío", ship ? BN.money(ship) : "Gratis"] });
     L.push({ lr: ["TOTAL", BN.money(o.total)], b: true, big: true });
+    payLines(L, o.payment, o.total);
     L.push({ lr: ["Estado", O_LABEL[o.status] || o.status || ""] });
     return L.concat(footer(cfg));
+  }
+
+  // Pago en línea (Mercado Pago o Stripe) de un pedido o cita
+  function payLines(L, p, total) {
+    if (!p || p.mode === "sucursal") return;
+    var prov = { mp: "Mercado Pago", stripe: "Stripe" }[p.provider] || p.provider || "";
+    if (p.status !== "pagado") { L.push({ lr: ["Pago en línea", p.status === "rechazado" ? "Rechazado" : "Pendiente"] }); return; }
+    L.push({ lr: ["Pagado " + prov, BN.money(p.paid)] });
+    if (total - p.paid >= 1) L.push({ lr: ["Por pagar", BN.money(total - p.paid)], b: true });
   }
 
   function bookingLines(b, svcName, price, cfg) {
@@ -70,6 +80,7 @@
     L.push({ lr: ["  " + b.min + " min", BN.money(price)] });
     L.push({ hr: true });
     L.push({ lr: ["TOTAL", BN.money(price)], b: true, big: true });
+    payLines(L, b.payment, price);
     L.push({ lr: ["Estado", B_LABEL[b.status] || b.status || ""] });
     if (b.notes) { L.push({ t: "Notas:" }); L.push({ t: b.notes }); }
     return L.concat(footer(cfg));

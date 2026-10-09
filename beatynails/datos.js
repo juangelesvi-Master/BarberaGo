@@ -16,7 +16,15 @@
     staff: ["Daniela", "Fernanda", "Valeria"],
     // Minutos desde medianoche [abre, cierra] por día de la semana; null = cerrado (0 = domingo)
     hours: { 0: null, 1: [600, 1200], 2: [600, 1200], 3: [600, 1200], 4: [600, 1200], 5: [600, 1200], 6: [600, 1080] },
-    settings: { step: 30, shipping: 99, freeFrom: 800 },
+    settings: {
+      step: 30, shipping: 99, freeFrom: 800,
+      // Cobro en línea: la llave secreta vive en la función del servidor, nunca aquí
+      pagos: {
+        url: "", key: "", demo: true, mp: true, stripe: true,
+        citas: { completo: true, anticipo: true, sucursal: true }, pct: 50,
+        tienda: { linea: true, sucursal: true }
+      }
+    },
     products: [
       { id: "p1", cat: "Esmaltes", name: "Esmalte en gel Rojo Cereza", desc: "15 ml · curado UV/LED", price: 189, stock: 24, active: true, art: ["bottle", "#b0123a"], tag: "Favorito" },
       { id: "p2", cat: "Esmaltes", name: "Esmalte en gel Nude Rosado", desc: "15 ml · curado UV/LED", price: 189, stock: 18, active: true, art: ["bottle", "#e7b5a8"] },
@@ -35,7 +43,7 @@
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function money(n) { return "$" + Math.round(n).toLocaleString("es-MX"); }
+  function money(n) { n = Math.round(n); return (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString("es-MX"); }
   function pad(n) { return (n < 10 ? "0" : "") + n; }
   function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
   function hm(m) { return pad(Math.floor(m / 60)) + ":" + pad(m % 60); }
@@ -105,7 +113,13 @@
     services: function () { return load("bn_services", clone(DEFAULTS.services)); },
     staff: function () { return load("bn_staff", clone(DEFAULTS.staff)); },
     hours: function () { return load("bn_hours", clone(DEFAULTS.hours)); },
-    settings: function () { var s = load("bn_settings", {}), d = clone(DEFAULTS.settings); for (var k in s) d[k] = s[k]; return d; },
+    settings: function () {
+      var s = load("bn_settings", {}), d = clone(DEFAULTS.settings), k;
+      for (k in s) if (k !== "pagos") d[k] = s[k];
+      var p = s.pagos || {};
+      for (k in p) d.pagos[k] = (p[k] && typeof p[k] === "object") ? Object.assign(d.pagos[k] || {}, p[k]) : p[k];
+      return d;
+    },
     products: function () { return load("bn_products", clone(DEFAULTS.products)); },
     bookings: function () { return load("bn_bookings", []); },
     orders: function () { return load("bn_orders", []); },
@@ -123,9 +137,29 @@
   BN.seed = function () {
     seedV2();
     seedSales();
+    seedPayments();
   };
   // Ventas de mostrador de ejemplo: cobra parte de las citas de ejemplo ya atendidas y agrega
   // algunas compras de productos sin cita
+  // Algunas citas y pedidos de ejemplo pagados en línea
+  function seedPayments() {
+    if (load("bn_seed_v4", false)) return;
+    var seedN = 5, today = ymd(new Date());
+    function rnd() { seedN = (seedN * 16807) % 2147483647; return (seedN - 1) / 2147483646; }
+    function when() { return addDays(today, -Math.floor(rnd() * 4)) + "T" + pad(9 + Math.floor(rnd() * 10)) + ":" + pad(Math.floor(rnd() * 60)) + ":00"; }
+    var bookings = BN.bookings(), orders = BN.orders(), pct = BN.settings().pagos.pct;
+    bookings.forEach(function (b) {
+      if (!b.demo || b.status !== "confirmada" || b.payment || rnd() > .45) return;
+      var full = rnd() < .4, due = full ? b.price : Math.round(b.price * pct / 100), d = when();
+      if (d.slice(0, 10) > b.date) d = b.date + "T09:00:00";
+      b.payment = { mode: full ? "completo" : "anticipo", provider: rnd() < .6 ? "mp" : "stripe", status: "pagado", due: due, paid: due, id: "DEMO-" + b.id, date: d };
+    });
+    orders.forEach(function (o) {
+      if (!o.demo || o.payment || o.status === "cancelado" || rnd() > .5) return;
+      o.payment = { mode: "linea", provider: rnd() < .6 ? "mp" : "stripe", status: "pagado", due: o.total, paid: o.total, id: "DEMO-" + o.id, date: o.created };
+    });
+    save("bn_bookings", bookings); save("bn_orders", orders); save("bn_seed_v4", true);
+  }
   function seedSales() {
     if (load("bn_seed_v3", false)) return;
     var seedN = 11;
