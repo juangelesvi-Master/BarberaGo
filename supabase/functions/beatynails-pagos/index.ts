@@ -1,10 +1,16 @@
-// BeatyNails · cobros en línea con Mercado Pago y Stripe para la página estática (beatynails/).
+// BeatyNails · cobros en línea con Mercado Pago y Stripe, y código por SMS para confirmar citas,
+// para la página estática (beatynails/).
 //
 // Las llaves secretas viven solo aquí, como secretos de la función:
 //   BN_MP_ACCESS_TOKEN    Access Token de Mercado Pago (APP_USR-... o TEST-...)
 //   BN_STRIPE_SECRET_KEY  Llave secreta de Stripe (sk_live_... o sk_test_...)
 //   BN_ORIGENES           Dominios de la página separados por coma (https://beatynails.com,...)
 //   BN_MONEDA             Moneda, por defecto MXN
+//   BN_TWILIO_SID         Account SID de Twilio (AC...) para mandar el código por SMS
+//   BN_TWILIO_TOKEN       Auth Token de Twilio
+//   BN_TWILIO_FROM        Número de Twilio que envía (+1...) o Messaging Service SID (MG...)
+//   BN_CODIGO_SECRETO     Texto largo al azar para firmar los códigos (opcional; si falta se usa el Auth Token)
+//   BN_PAIS               Lada del país para números de 10 dígitos, por defecto 52 (México)
 //
 // Acciones (POST JSON):
 //   {accion:"estado"}  → qué proveedores tienen llave
@@ -12,6 +18,10 @@
 //        → {url}: liga de pago. Al terminar, el proveedor regresa a `regreso` con ?pago=...&prov=...&ref=...
 //   {accion:"verificar", proveedor, id, referencia}
 //        → {pagado, estado, monto}: se consulta al proveedor; nunca se confía en lo que diga el navegador.
+//   {accion:"codigo-enviar", telefono}
+//        → {token}: manda por SMS un código de 4 números. El navegador nunca recibe el código, solo
+//          un token firmado que sirve para revisarlo durante 10 minutos.
+//   {accion:"codigo-verificar", telefono, token, codigo} → {ok}
 //
 // Despliegue: supabase functions deploy beatynails-pagos --no-verify-jwt
 
@@ -124,13 +134,68 @@ async function verificarStripe(key: string, id: string, ref: string) {
   return { pagado: deEsteCobro && d.payment_status === "paid", estado: deEsteCobro ? String(d.payment_status) : "otra-referencia", monto: (Number(d.amount_total) || 0) / 100 };
 }
 
+// ---------- Código por SMS ----------
+const enc = new TextEncoder();
+const b64u = (b: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+async function firmar(secreto: string, texto: string) {
+  const k = await crypto.subtle.importKey("raw", enc.encode(secreto), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64u(await crypto.subtle.sign("HMAC", k, enc.encode(texto)));
+}
+function igual(a: string, b: string) { if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; }
+function leerTelefono(b: Record<string, unknown>, env: Env) {
+  const d = String(b.telefono || "").replace(/\D/g, "");
+  if (d.length === 10) return "+" + (env("BN_PAIS") || "52") + d;
+  if (d.length >= 11 && d.length <= 15) return "+" + d;
+  throw new ErrorVisible("Escribe un celular a 10 dígitos.");
+}
+/** Solo la página del salón puede pedir códigos (evita que otros sitios manden SMS con tu cuenta). */
+function revisarOrigen(req: Request, env: Env) {
+  const permitidos = (env("BN_ORIGENES") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (permitidos.length && !permitidos.includes(req.headers.get("origin") || "")) throw new ErrorVisible("Este dominio no está autorizado.");
+}
+const VIGENCIA = 10 * 60 * 1000;
+
+async function codigoEnviar(b: Record<string, unknown>, req: Request, env: Env) {
+  const sid = env("BN_TWILIO_SID"), tok = env("BN_TWILIO_TOKEN"), from = env("BN_TWILIO_FROM");
+  if (!sid || !tok || !from) throw new ErrorVisible("El envío de códigos no está configurado en el salón.");
+  revisarOrigen(req, env);
+  const tel = leerTelefono(b, env);
+  const n = new Uint32Array(1); crypto.getRandomValues(n);
+  const codigo = String(n[0] % 10000).padStart(4, "0");
+  const datos = b64u(enc.encode(JSON.stringify({ t: tel, e: Date.now() + VIGENCIA })));
+  const token = datos + "." + await firmar(env("BN_CODIGO_SECRETO") || tok, datos + "|" + codigo);
+  const f = new URLSearchParams({ To: tel, Body: `BeatyNails: tu código para confirmar tu cita es ${codigo}. Vence en 10 minutos.` });
+  f.set(from.startsWith("MG") ? "MessagingServiceSid" : "From", from);
+  const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: "POST",
+    headers: { Authorization: "Basic " + btoa(`${sid}:${tok}`), "Content-Type": "application/x-www-form-urlencoded" },
+    body: f.toString(),
+  });
+  if (!r.ok) { console.error("Twilio", r.status, await r.text().catch(() => "")); throw new ErrorVisible("No pudimos mandar el código a ese número. Revísalo e intenta de nuevo."); }
+  return { token };
+}
+
+async function codigoVerificar(b: Record<string, unknown>, env: Env) {
+  const tok = env("BN_TWILIO_TOKEN") || "";
+  const tel = leerTelefono(b, env), codigo = String(b.codigo || ""), [datos, firma] = String(b.token || "").split(".");
+  if (!/^\d{4}$/.test(codigo) || !datos || !firma) return { ok: false, motivo: "incorrecto" };
+  let info: { t?: string; e?: number } = {};
+  try { info = JSON.parse(atob(datos.replace(/-/g, "+").replace(/_/g, "/"))); } catch { return { ok: false, motivo: "incorrecto" }; }
+  if (info.t !== tel) return { ok: false, motivo: "incorrecto" };
+  if (!info.e || info.e < Date.now()) return { ok: false, motivo: "vencido" };
+  const ok = igual(await firmar(env("BN_CODIGO_SECRETO") || tok, datos + "|" + codigo), firma);
+  return ok ? { ok: true } : { ok: false, motivo: "incorrecto" };
+}
+
 export async function manejar(req: Request, env: Env): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Método no permitido" }, 405);
   const mp = env("BN_MP_ACCESS_TOKEN") || "", stripe = env("BN_STRIPE_SECRET_KEY") || "", moneda = env("BN_MONEDA") || "MXN";
   try {
     const b = await req.json().catch(() => ({})) as Record<string, unknown>;
-    if (b.accion === "estado") return json({ mp: !!mp, stripe: !!stripe, moneda });
+    if (b.accion === "estado") return json({ mp: !!mp, stripe: !!stripe, moneda, sms: !!(env("BN_TWILIO_SID") && env("BN_TWILIO_TOKEN") && env("BN_TWILIO_FROM")) });
+    if (b.accion === "codigo-enviar") return json(await codigoEnviar(b, req, env));
+    if (b.accion === "codigo-verificar") return json(await codigoVerificar(b, env));
     const proveedor = String(b.proveedor || "");
     if (proveedor !== "mp" && proveedor !== "stripe") throw new ErrorVisible("Elige Mercado Pago o Stripe.");
     if (proveedor === "mp" && !mp) throw new ErrorVisible("Mercado Pago no está configurado en el salón.");

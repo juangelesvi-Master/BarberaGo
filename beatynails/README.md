@@ -112,6 +112,30 @@ al cancelar.
 Mientras los datos vivan en el navegador, los precios que se cobran los manda la página; el panel avisa
 si lo pagado no coincide con lo esperado. Con la base de datos, la función tomará los precios de ahí.
 
+## Código para confirmar la cita (SMS)
+
+Al reservar, la clienta recibe por SMS un código de 4 números y lo escribe en la página para confirmar
+su cita. Si el código no llega puede pedir otro (cada 30 segundos), y un número ya confirmado no vuelve
+a pedir código durante 30 minutos. En el panel la cita aparece como **verificada**. Se prende o apaga en
+**Horario y servicios → Confirmación de citas**.
+
+Arranca en **modo de prueba**: el código se muestra en pantalla y no se manda SMS. Para mandarlo de
+verdad:
+
+1. Crea una cuenta en [Twilio](https://www.twilio.com) y compra un número que pueda mandar SMS a México
+   (o crea un Messaging Service). Cada SMS se cobra en tu cuenta de Twilio.
+2. Guarda en Supabase (Edge Functions → Secrets) `BN_TWILIO_SID` (Account SID), `BN_TWILIO_TOKEN`
+   (Auth Token) y `BN_TWILIO_FROM` (tu número, como `+15551234567`, o el SID `MG…` del Messaging
+   Service). Opcional: `BN_PAIS` (lada del país, `52` por omisión) y `BN_CODIGO_SECRETO` (firma de los
+   códigos; si no está se usa el Auth Token).
+3. Publica la función `beatynails-pagos` (la misma de los pagos) y pon su dirección en **Pagos en
+   línea**. **Probar conexión** dice si los SMS están listos.
+4. Quita el **modo de prueba** en Confirmación de citas.
+
+Cómo funciona: la función genera el código y lo manda; la página solo recibe un comprobante firmado y
+le pregunta a la función si el código escrito es el correcto, así que el código nunca pasa por la página.
+Vence a los 10 minutos y se aceptan 5 intentos por código.
+
 ## Cómo editarla
 
 Servicios, manicuristas, horario y productos se cambian desde el panel. Los valores iniciales están en

@@ -539,6 +539,15 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
             <form class="inline" id="staffForm"><input id="staffName" placeholder="Nombre" aria-label="Nombre de la manicurista"><button class="btn btn-line" type="submit">Agregar</button></form>
           </div>
           <div class="card">
+            <h2>Confirmación de citas <span class="conn" id="cdState"></span></h2>
+            <div class="checks">
+              <label><input type="checkbox" id="cdOn"><b>Pedir código al reservar</b><span>La clienta recibe por SMS un código de 4 números y lo escribe para confirmar su cita.</span></label>
+              <label><input type="checkbox" id="cdDemo"><b>Modo de prueba</b><span>El código se muestra en pantalla y no se manda SMS. Quítalo cuando Twilio esté conectado.</span></label>
+            </div>
+            <p class="hint" style="margin-top:10px">Para mandar SMS de verdad se usa la misma función del servidor que los pagos (su dirección se pone en <b>Pagos en línea</b>) con estos secretos de Supabase: <code>BN_TWILIO_SID</code>, <code>BN_TWILIO_TOKEN</code> y <code>BN_TWILIO_FROM</code> (tu número de Twilio).</p>
+            <div class="row-actions"><button type="button" class="btn btn-line" id="saveCode">Guardar</button><span class="hint" id="cdErr"></span></div>
+          </div>
+          <div class="card">
             <h2>Envíos de la tienda</h2>
             <div class="two">
               <label class="f" for="shipCost">Costo de envío<input id="shipCost" type="number" min="0" step="1"></label>
@@ -1017,7 +1026,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       mine.forEach(function (b) {
         if (b.date !== lastDate) { lastDate = b.date; body += '<tr class="day"><td colspan="6">' + esc(BN.niceDate(b.date)) + (b.date === TODAY ? " · hoy" : "") + '</td></tr>'; }
         body += '<tr class="' + (b.status === "cancelada" ? "off" : "") + '"><td class="num"><b>' + hm(b.start) + '</b><br><span class="muted">' + hm(b.start + b.min) + '</span></td>' +
-          '<td class="cell-main"><b>' + esc(b.name) + '</b><span class="num">' + esc(b.phone || "") + (b.notes ? " · " + esc(b.notes) : "") + '</span></td>' +
+          '<td class="cell-main"><b>' + esc(b.name) + '</b><span class="num">' + esc(b.phone || "") + (b.verified ? ' <span title="Confirmó con código por SMS" style="color:var(--ok)">✓ verificado</span>' : "") + (b.notes ? " · " + esc(b.notes) : "") + '</span></td>' +
           '<td>' + esc(svcName(b)) + '</td><td class="r num"><div class="pay-cell">' + money(bPrice(b)) + payPill(b) + '</div></td>' +
           '<td>' + statusSelect("bstatus", b.id, b.status || "confirmada", B_STATUS) + '</td>' +
           '<td><div class="actions">' + (b.status !== "cancelada" && b.status !== "no-asistio" && !isPaid(b) ? '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button>' : isPaid(b) ? '<span class="pill st-completada">Cobrada</span>' : "") + '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button><button type="button" class="linkbtn" data-editb="' + esc(b.id) + '">Cambiar</button><button type="button" class="linkbtn danger" data-delb="' + esc(b.id) + '">Eliminar</button></div></td></tr>';
@@ -1040,7 +1049,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       '<dt>Servicio</dt><dd>' + esc(svcName(b)) + '</dd>' +
       '<dt>Manicurista</dt><dd><span class="sdot" style="--c:' + staffColor(b.staff) + ';display:inline-block;margin-right:6px"></span>' + esc(b.staff) + '</dd>' +
       '<dt>Precio</dt><dd class="num"><div class="pay-cell" style="justify-items:start">' + money(bPrice(b)) + payPill(b) + (isPaid(b) ? '<span class="pill st-completada">Cobrada</span>' : "") + '</div></dd>' +
-      (phone ? '<dt>WhatsApp</dt><dd class="num"><a href="https://wa.me/' + esc(wa) + '" target="_blank" rel="noopener">' + esc(b.phone) + '</a></dd>' : "") +
+      (phone ? '<dt>Celular</dt><dd class="num"><a href="https://wa.me/' + esc(wa) + '" target="_blank" rel="noopener">' + esc(b.phone) + '</a>' + (b.verified ? ' <span class="pill st-completada" title="Confirmó con el código que le llegó por SMS">Verificado</span>' : "") + '</dd>' : "") +
       (b.notes ? '<dt>Notas</dt><dd style="font-weight:500">' + esc(b.notes) + '</dd>' : "") +
       '<dt>Estado</dt><dd>' + statusSelect("bstatus", b.id, b.status || "confirmada", B_STATUS) + '</dd>' +
       '</dl>',
@@ -1273,6 +1282,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   var draftServices = null, draftStaff = null;
   function renderHorario() {
     var h = BN.hours(), set = BN.settings();
+    $("#cdOn").checked = set.codigo.activo; $("#cdDemo").checked = set.codigo.demo; $("#cdErr").textContent = ""; cdState();
     $("#hoursEdit").innerHTML = [1, 2, 3, 4, 5, 6, 0].map(function (d) {
       var v = h[d];
       return '<div class="hours-row"><span>' + DAYNAMES[d] + '</span><label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" data-open="' + d + '"' + (v ? " checked" : "") + '> Abierto</label>' +
@@ -1303,7 +1313,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   });
   $("#saveShip").addEventListener("click", function () {
     var set = BN.settings(); set.shipping = Math.max(0, +$("#shipCost").value || 0); set.freeFrom = Math.max(0, +$("#shipFree").value || 0);
-    if (saveOr("bn_settings", set)) toast("Envíos guardados");
+    if (saveOr("bn_settings", set)) cdState(), toast("Envíos guardados");
   });
 
   // ---------- Cuenta ----------
@@ -1350,7 +1360,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     if (err) return;
     var set = BN.settings();
     set.pagos = { url: url, key: $("#pgKey").value.trim(), demo: demo, mp: mp, stripe: stripe, citas: { completo: full, anticipo: dep, sucursal: store }, pct: pct >= 10 && pct <= 90 ? pct : set.pagos.pct, tienda: { linea: shopOn, sucursal: shopLater } };
-    if (saveOr("bn_settings", set)) toast("Pagos guardados");
+    if (saveOr("bn_settings", set)) cdState(), toast("Pagos guardados");
   });
   $("#pgTest").addEventListener("click", function () {
     var url = $("#pgUrl").value.trim(), key = $("#pgKey").value.trim(), msg = $("#pgTestMsg");
@@ -1361,11 +1371,28 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     fetch(url, { method: "POST", headers: h, body: JSON.stringify({ accion: "estado" }) })
       .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || d.message || "respondió " + r.status); return d; }); })
       .then(function (d) {
-        var ok = [d.mp ? "Mercado Pago" : null, d.stripe ? "Stripe" : null].filter(Boolean);
+        var ok = [d.mp ? "Mercado Pago" : null, d.stripe ? "Stripe" : null, d.sms ? "SMS (Twilio)" : null].filter(Boolean);
         msg.style.color = ok.length ? "var(--ok)" : "var(--warn)";
         msg.textContent = ok.length ? "Conectado: " + ok.join(" y ") + " · " + (d.moneda || "MXN") : "La función responde, pero no tiene llaves guardadas.";
       })
       .catch(function (e) { msg.style.color = "var(--bad)"; msg.textContent = "No se pudo conectar: " + e.message; });
+  });
+
+  // Confirmación de citas por código
+  // La etiqueta muestra lo guardado; las casillas, lo que se va a guardar
+  function cdState() {
+    $("#cdDemo").disabled = !$("#cdOn").checked;
+    var c = BN.settings().codigo, on = c.activo, demo = c.demo;
+    $("#cdState").textContent = !on ? "Apagado" : demo ? "Modo de prueba" : "Manda SMS";
+    $("#cdState").style.color = !on ? "var(--muted)" : demo ? "var(--warn)" : "var(--ok)";
+  }
+  ["#cdOn", "#cdDemo"].forEach(function (id) { $(id).addEventListener("change", cdState); });
+  $("#saveCode").addEventListener("click", function () {
+    var set = BN.settings(), on = $("#cdOn").checked, demo = $("#cdDemo").checked;
+    if (on && !demo && !set.pagos.url) { $("#cdErr").textContent = "Primero pon la dirección de la función en Pagos en línea, o deja el modo de prueba."; $("#cdErr").style.color = "var(--bad)"; return; }
+    $("#cdErr").textContent = "";
+    set.codigo = { activo: on, demo: demo };
+    if (saveOr("bn_settings", set)) cdState(), toast(on ? "Confirmación por código guardada" : "Confirmación por código apagada");
   });
 
   function renderStaff() {
