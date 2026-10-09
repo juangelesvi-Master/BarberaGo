@@ -4,3 +4,5 @@
     Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>
+
+AddType application/vnd.android.package-archive .apk

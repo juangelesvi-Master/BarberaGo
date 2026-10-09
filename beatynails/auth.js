@@ -3,9 +3,12 @@
    igual que los datos del panel. Protege el panel en el equipo del salón; cuando los datos pasen
    a una base de datos, el acceso pasará a Supabase Auth. */
 (function () {
-  var KEY = "bn_auth", SESS = "bn_session", ITER = 150000, DAYS = 30;
+  var KEY = "bn_auth2", SESS = "bn_session", ITER = 150000, DAYS = 30;
   var enc = new TextEncoder();
 
+  // Acceso del salón: usuario "beauty". Aquí solo está la huella de la contraseña, no la contraseña.
+  var DEFAULT = { user: "beauty", name: "beauty", salt: "91bd14022081744dcf70a9899136b6b3", hash: "ffebe81cd16eb697cb764a9d49b82742296183a9384f2497e5501092695f5554", iter: 150000, preset: true };
+  function account() { return read(KEY) || DEFAULT; }
   function read(k, store) { try { return JSON.parse((store || localStorage).getItem(k)); } catch (e) { return null; } }
   function write(k, v, store) { try { (store || localStorage).setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
   function hex(buf) { return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ("0" + b.toString(16)).slice(-2); }).join(""); }
@@ -56,25 +59,18 @@
   function clearFails() { try { localStorage.removeItem(LOCK); } catch (e) {} }
 
   var Auth = {
-    exists: function () { var a = read(KEY); return !!(a && a.hash); },
-    name: function () { var a = read(KEY); return a ? a.name || a.user : ""; },
+    exists: function () { return true; },
+    canRecover: function () { return !!account().rhash; },
+    name: function () { var a = account(); return a.name || a.user; },
     checkPassword: checkPassword,
     /** Sesión válida: existe la cuenta, no ha vencido y la contraseña no ha cambiado desde que se abrió. */
     session: function () {
-      var a = read(KEY), s = read(SESS, sessionStorage) || read(SESS);
+      var a = account(), s = read(SESS, sessionStorage) || read(SESS);
       return !!(a && s && s.user === a.user && s.sig === a.hash.slice(0, 24) && s.exp > Date.now());
-    },
-    /** Crea la cuenta del salón. Devuelve el código de recuperación para que lo guarden. */
-    create: function (user, pass) {
-      if (Auth.exists()) return Promise.reject(new Error("Ya hay una cuenta creada en este navegador."));
-      if (!norm(user)) return Promise.reject(new Error("Escribe un usuario."));
-      var e = checkPassword(pass); if (e) return Promise.reject(new Error(e));
-      var code = recoveryCode();
-      return store(user, pass, code).then(function (a) { startSession(a, false); return code; });
     },
     login: function (user, pass, remember) {
       var wait = lockedFor(); if (wait) return Promise.reject(new Error("Demasiados intentos. Espera " + wait + " segundos."));
-      var a = read(KEY); if (!a) return Promise.reject(new Error("Todavía no hay cuenta en este navegador."));
+      var a = account();
       return derive(pass, a.salt, a.iter || ITER).then(function (h) {
         if (norm(user) !== a.user || !same(h, a.hash)) { fail(); throw new Error("Usuario o contraseña incorrectos."); }
         clearFails(); startSession(a, remember);
@@ -83,7 +79,7 @@
     logout: function () { try { localStorage.removeItem(SESS); sessionStorage.removeItem(SESS); } catch (e) {} },
     /** Cambia la contraseña conociendo la actual. Cierra las demás sesiones. */
     change: function (oldPass, newPass) {
-      var a = read(KEY); if (!a) return Promise.reject(new Error("No hay cuenta."));
+      var a = JSON.parse(JSON.stringify(account())); delete a.preset;
       var e = checkPassword(newPass); if (e) return Promise.reject(new Error(e));
       return derive(oldPass, a.salt, a.iter || ITER).then(function (h) {
         if (!same(h, a.hash)) throw new Error("La contraseña actual no es correcta.");
@@ -94,7 +90,7 @@
     /** Con el código de recuperación pone una contraseña nueva y entrega un código nuevo. */
     recover: function (user, code, newPass) {
       var wait = lockedFor(); if (wait) return Promise.reject(new Error("Demasiados intentos. Espera " + wait + " segundos."));
-      var a = read(KEY); if (!a) return Promise.reject(new Error("No hay cuenta."));
+      var a = account(); if (!a.rhash) return Promise.reject(new Error("Este acceso no tiene código de recuperación."));
       var e = checkPassword(newPass); if (e) return Promise.reject(new Error(e));
       return derive(normCode(code), a.rsalt, a.iter || ITER).then(function (h) {
         if (norm(user) !== a.user || !same(h, a.rhash)) { fail(); throw new Error("Usuario o código de recuperación incorrectos."); }

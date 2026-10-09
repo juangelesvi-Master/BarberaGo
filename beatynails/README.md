@@ -125,6 +125,20 @@ Lo da en el salón:
 Un código ya usado lo dice ("Asistencia confirmada" o "Pedido entregado") y no se puede usar dos veces.
 No se repite con otro código que siga sin usarse. Las citas que se pagan en el salón no llevan código.
 
+## Entrar al panel y app para Android
+
+El panel se abre en `entrar.html` con el usuario **beauty** y la contraseña **beauty123**. En el
+código solo está la huella de la contraseña (PBKDF2), no la contraseña. Desde **Cuenta** se puede
+cambiar, pero el cambio vale solo en ese navegador o teléfono. Ojo: como la página es estática, esto
+evita que cualquiera entre por accidente, pero no es una protección fuerte; la protección de verdad
+llega cuando los datos pasen a Supabase con su propio acceso.
+
+La app para Android (`descargas/beatynails-panel.apk`) abre `https://beautynails.restorago.com/admin.html`
+dentro de la app, así que siempre tiene la versión publicada. Se descarga desde la pantalla de entrada,
+desde **Cuenta** y desde el pie de la página. Su código está en `beatynails-app/` y se compila con
+`beatynails-app/build.sh` (instrucciones dentro). Hay que firmar siempre con la misma llave para que
+Android deje instalar las actualizaciones encima.
+
 ## Cómo editarla
 
 Servicios, manicuristas, horario y productos se cambian desde el panel. Los valores iniciales están en

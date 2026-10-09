@@ -655,7 +655,12 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
         </form>
         <div class="card">
           <h2>Cómo funciona el acceso</h2>
-          <p class="hint" style="font-size:14px;line-height:1.6">La contraseña protege el panel en este navegador, donde también se guardan las citas y ventas. En otro equipo o navegador se crea su propio acceso la primera vez. Si olvidas la contraseña, en la pantalla de entrada usa "¿Olvidaste tu contraseña?" con tu código de recuperación.</p>
+          <p class="hint" style="font-size:14px;line-height:1.6">Se entra con el usuario <b>beauty</b>. Si cambias la contraseña aquí, el cambio vale solo en este navegador o teléfono, donde también se guardan las citas y ventas; en los demás se sigue entrando con la contraseña de siempre.</p>
+        </div>
+        <div class="card">
+          <h2>App para Android</h2>
+          <p class="hint" style="font-size:14px;line-height:1.6;margin-bottom:12px">Instala el panel como app en un teléfono o tableta Android. Al abrir el archivo, Android pide permiso para instalar apps de fuera de la Play Store.</p>
+          <a class="btn btn-primary" href="descargas/beatynails-panel.apk" download>Descargar app (APK)</a>
         </div>
       </div>
     </section>
@@ -1374,7 +1379,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     }, function (x) { msg.textContent = x.message; });
   });
   // Si se cierra la sesión en otra pestaña, este panel también se cierra
-  window.addEventListener("storage", function (e) { if ((e.key === "bn_session" || e.key === "bn_auth" || e.key === null) && !Auth.session()) Auth.guard("entrar.html"); });
+  window.addEventListener("storage", function (e) { if ((e.key === "bn_session" || e.key === "bn_auth2" || e.key === null) && !Auth.session()) Auth.guard("entrar.html"); });
 
   // ---------- Pagos en línea ----------
   function renderPagos() {
