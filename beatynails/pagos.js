@@ -23,7 +23,9 @@
     '.pg-box{background:var(--surface,#fff);color:var(--ink,#222);border-radius:16px;padding:24px;width:min(420px,100%);box-shadow:0 20px 60px rgb(0 0 0 / .25);display:grid;gap:12px}' +
     '.pg-box h2{margin:0;font-size:24px}.pg-box p{margin:0;font-size:15px;color:var(--muted,#666)}.pg-box .pg-amt{font-size:30px;font-weight:700;color:var(--ink,#222)}' +
     '.pg-sim{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--blush,#f6e6ea);color:var(--lacquer,#8c1d40);padding:4px 9px;border-radius:999px;justify-self:start}' +
-    '.pg-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.pg-btns button{flex:1 1 140px}';
+    '.pg-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.pg-btns button{flex:1 1 140px}' +
+    '.pg-code{background:var(--blush,#f6e6ea);border-radius:14px;padding:14px;text-align:center;display:grid;gap:4px}.pg-code small{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--lacquer,#8c1d40)}' +
+    '.pg-code b{font:700 44px/1.1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:.3em;padding-left:.3em;color:var(--ink,#222)}.pg-code span{font-size:14px;color:var(--muted,#666)}';
   function modal(o) {
     if (!document.getElementById("pg-css")) { var st = document.createElement("style"); st.id = "pg-css"; st.textContent = css; document.head.appendChild(st); }
     close();
@@ -69,6 +71,15 @@
     return r;
   }
 
+  /** Código de 4 números para dar en el salón; no se repite con otro que siga sin usarse. */
+  function newCode(recs) {
+    var used = {};
+    recs.forEach(function (x) { if (x.codigo && !x.llego && x.status !== "entregado" && x.status !== "cancelado" && x.status !== "cancelada") used[x.codigo] = 1; });
+    var a = new Uint32Array(1), c;
+    do { crypto.getRandomValues(a); c = String(a[0] % 10000).padStart(4, "0"); } while (used[c]);
+    return c;
+  }
+
   /** Guarda el resultado en el pedido o la cita con esa referencia. Devuelve {kind, rec} o null. */
   function apply(ref, res) {
     var lists = [["o", "bn_orders", BN.orders()], ["b", "bn_bookings", BN.bookings()]];
@@ -77,7 +88,7 @@
       if (!rec || !rec.payment) continue;
       var p = rec.payment;
       if (p.status !== "pagado") {
-        if (res.pagado) { p.status = "pagado"; p.paid = res.monto || p.due; p.id = res.id || p.id || ""; p.date = BN.stamp(); }
+        if (res.pagado) { p.status = "pagado"; p.paid = res.monto || p.due; p.id = res.id || p.id || ""; p.date = BN.stamp(); if (!rec.codigo) rec.codigo = newCode(lists[0][2].concat(lists[1][2])); }
         else p.status = "rechazado";
         BN.save(lists[i][1], arr);
       }
@@ -86,5 +97,10 @@
     return null;
   }
 
-  window.Pagos = { NAMES: NAMES, cfg: cfg, providers: providers, ready: ready, call: call, start: start, verify: verify, readReturn: readReturn, apply: apply, modal: modal, close: close };
+  /** Recuadro con el código para mostrar a la clienta. */
+  function codeHtml(code, why) {
+    return '<div class="pg-code"><small>Tu código para el salón</small><b class="num">' + BN.esc(code) + '</b><span>' + BN.esc(why) + '</span></div>';
+  }
+
+  window.Pagos = { NAMES: NAMES, cfg: cfg, providers: providers, ready: ready, call: call, start: start, verify: verify, readReturn: readReturn, apply: apply, codeHtml: codeHtml, modal: modal, close: close };
 })();

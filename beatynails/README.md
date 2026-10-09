@@ -112,6 +112,19 @@ al cancelar.
 Mientras los datos vivan en el navegador, los precios que se cobran los manda la página; el panel avisa
 si lo pagado no coincide con lo esperado. Con la base de datos, la función tomará los precios de ahí.
 
+## Código para el salón
+
+Cuando una clienta paga en línea (la cita completa, el anticipo o un pedido), la pantalla de "pago
+recibido" le muestra un código de 4 números. También lo ve en "Mis próximas citas" y en el carrito.
+Lo da en el salón:
+
+- **Cita:** en el panel, **Resumen → Código del cliente**, se escribe el código y se toca
+  **Confirmar asistencia**. La cita queda marcada como "Llegó" con la hora.
+- **Pedido:** con el mismo código se toca **Entregar pedido** y el pedido pasa a entregado.
+
+Un código ya usado lo dice ("Asistencia confirmada" o "Pedido entregado") y no se puede usar dos veces.
+No se repite con otro código que siga sin usarse. Las citas que se pagan en el salón no llevan código.
+
 ## Cómo editarla
 
 Servicios, manicuristas, horario y productos se cambian desde el panel. Los valores iniciales están en

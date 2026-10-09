@@ -245,6 +245,17 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
 .staff-list button { background: none; border: 0; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; }
 .svc-edit td { padding: 6px 6px; }
 .svc-edit input { padding: 6px 8px; }
+.codecheck { margin-bottom: 16px; display: grid; gap: 14px; }
+.cc-in { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.cc-in label { display: grid; gap: 4px; flex: 1 1 260px; }
+.cc-in input { width: 150px; font: 700 30px/1.1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: .3em; text-align: center; padding: 10px 6px 10px 14px; }
+.cc-out:empty { display: none; }
+.cc-hit { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.cc-hit + .cc-hit { margin-top: 8px; }
+.cc-info { flex: 1 1 240px; display: grid; gap: 2px; font-size: 14px; color: var(--muted); }
+.cc-info b { color: var(--ink); font-size: 15px; }
+.cc-done { color: var(--ok); font-weight: 700; font-size: 14px; }
+.cc-none { color: var(--bad); font-size: 14px; font-weight: 600; }
 .row-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
 .stack { display: grid; gap: 16px; }
 .inline { display: flex; gap: 8px; }
@@ -365,6 +376,13 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
           <button type="button" class="chip" data-range="30">30 días</button>
         </div>
       </div>
+      <form class="card codecheck" id="ccForm" novalidate autocomplete="off">
+        <div class="cc-in">
+          <label for="ccCode"><b>Código del cliente</b><span class="hint">Las clientas que pagan en línea reciben un código de 4 números. Escríbelo para confirmar su asistencia o entregar su pedido.</span></label>
+          <input id="ccCode" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000" aria-describedby="ccOut">
+        </div>
+        <div id="ccOut" class="cc-out" aria-live="polite"></div>
+      </form>
       <div class="kpis" id="kpis"></div>
       <div class="grid-2">
         <div class="card">
@@ -794,6 +812,42 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   var resRange = 7;
   $("#resRange").addEventListener("click", function (e) { var b = e.target.closest("[data-range]"); if (!b) return; resRange = +b.dataset.range; renderResumen(); });
 
+  // ---------- Código del cliente (pagos en línea) ----------
+  function ccFind(code) {
+    var b = BN.bookings().filter(function (x) { return x.codigo === code && x.status !== "cancelada"; }).map(function (x) { return { k: "b", r: x }; });
+    var o = BN.orders().filter(function (x) { return x.codigo === code && x.status !== "cancelado"; }).map(function (x) { return { k: "o", r: x }; });
+    // Primero lo pendiente y lo más cercano a hoy
+    return b.concat(o).sort(function (a, c) { return ccUsed(a) - ccUsed(c) || Math.abs(ccDay(a) - DAYMS) - Math.abs(ccDay(c) - DAYMS); });
+  }
+  var DAYMS = new Date(TODAY + "T12:00").getTime();
+  function ccDay(h) { return new Date((h.k === "b" ? h.r.date : (h.r.created || "").slice(0, 10)) + "T12:00").getTime() || 0; }
+  function ccUsed(h) { return h.k === "b" ? (h.r.llego ? 1 : 0) : h.r.status === "entregado" ? 1 : 0; }
+  function ccRender() {
+    var code = $("#ccCode").value.replace(/\D/g, "");
+    if (code.length < 4) { $("#ccOut").innerHTML = ""; return; }
+    var hits = ccFind(code);
+    $("#ccOut").innerHTML = hits.length ? hits.map(function (h) {
+      var x = h.r, p = x.payment || {}, used = ccUsed(h);
+      if (h.k === "b") {
+        var rest = bPrice(x) - (p.paid || 0), late = x.date < TODAY;
+        return '<div class="cc-hit"><div class="cc-info"><b>' + esc(x.name) + ' · cita</b><span>' + esc(svcName(x)) + ' con ' + esc(x.staff) + ' · ' + esc(BN.niceDate(x.date)) + ' a las <span class="num">' + hm(x.start) + '</span></span>' +
+          '<span class="num">Pagó ' + money(p.paid || 0) + (rest > 0 ? ' · le quedan ' + money(rest) + ' por pagar' : ' · pagada completa') + '</span>' + (x.date !== TODAY && !used ? '<span class="cc-none">' + (late ? "Esta cita era de un día anterior." : "Esta cita es para otro día.") + '</span>' : "") + '</div>' +
+          (used ? '<span class="cc-done">Asistencia confirmada · ' + esc(x.llego.slice(11, 16)) + '</span>' : '<button type="button" class="btn btn-primary" data-ccb="' + esc(x.id) + '">Confirmar asistencia</button>') + '</div>';
+      }
+      return '<div class="cc-hit"><div class="cc-info"><b>' + esc(x.name) + ' · pedido <span class="num">' + esc(x.id) + '</span></b><span>' + x.items.map(function (i) { return i.q + "× " + esc(i.name); }).join(", ") + '</span><span class="num">Pagado ' + money(p.paid || x.total) + ' · ' + (x.delivery === "envio" ? "envío a domicilio" : "recoge en el salón") + '</span></div>' +
+        (used ? '<span class="cc-done">Pedido entregado' + (x.entregado ? ' · ' + esc(x.entregado.slice(5, 10).split("-").reverse().join("/")) + ' ' + esc(x.entregado.slice(11, 16)) : "") + '</span>' : '<button type="button" class="btn btn-primary" data-cco="' + esc(x.id) + '">Entregar pedido</button>') + '</div>';
+    }).join("") : '<p class="cc-none">No hay ninguna cita ni pedido pagado con ese código.</p>';
+  }
+  $("#ccCode").addEventListener("input", function () { this.value = this.value.replace(/\D/g, "").slice(0, 4); ccRender(); });
+  $("#ccForm").addEventListener("submit", function (e) { e.preventDefault(); var b = $("#ccOut [data-ccb], #ccOut [data-cco]"); if (b) b.click(); });
+  $("#ccOut").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-ccb]"), o = e.target.closest("[data-cco]");
+    if (b) { var all = BN.bookings(); all.forEach(function (x) { if (x.id === b.dataset.ccb) x.llego = BN.stamp(); }); if (saveOr("bn_bookings", all)) toast("Asistencia confirmada"); }
+    else if (o) { var os = BN.orders(); os.forEach(function (x) { if (x.id === o.dataset.cco) { x.status = "entregado"; x.entregado = BN.stamp(); } }); if (saveOr("bn_orders", os)) toast("Pedido entregado"); }
+    else return;
+    render(); ccRender();
+  });
+
   function renderResumen() {
     document.querySelectorAll("#resRange [data-range]").forEach(function (b) { b.setAttribute("aria-pressed", +b.dataset.range === resRange); });
     var bookings = BN.bookings(), orders = BN.orders(), products = BN.products();
@@ -823,8 +877,8 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     var today = bookings.filter(function (b) { return b.date === TODAY && b.status !== "cancelada"; }).sort(bookingSort);
     $("#agendaCount").textContent = today.length ? today.length + (today.length === 1 ? " cita" : " citas") : "";
     $("#agenda").innerHTML = today.length ? today.map(function (b) {
-      return '<li><span class="time num">' + hm(b.start) + '</span><span class="who"><b>' + esc(b.name) + '</b><span>' + esc(svcName(b)) + ' · ' + esc(b.staff) + '</span>' + (onlinePaid(b) && !isPaid(b) ? '<span>' + payPill(b) + '</span>' : "") + '</span><span class="acts">' +
-        (b.status === "confirmada" ? '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button><button type="button" class="linkbtn danger" data-quick="' + b.id + '" data-st="no-asistio">No vino</button>' : pill(isPaid(b) ? "completada" : b.status, isPaid(b) ? { completada: "Cobrada" } : B_STATUS) + (b.status === "completada" ? (isPaid(b) ? "" : '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button>') + '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button>' : "")) + '</span></li>';
+      return '<li><span class="time num">' + hm(b.start) + '</span><span class="who"><b>' + esc(b.name) + '</b><span>' + esc(svcName(b)) + ' · ' + esc(b.staff) + '</span>' + (onlinePaid(b) && !isPaid(b) || b.llego ? '<span>' + (onlinePaid(b) && !isPaid(b) ? payPill(b) : "") + (b.llego ? ' <span class="pill st-completada">Llegó ' + esc(b.llego.slice(11, 16)) + '</span>' : "") + '</span>' : "") + '</span><span class="acts">' +
+        (b.status === "confirmada" ? '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button>' + (b.llego ? "" : '<button type="button" class="linkbtn danger" data-quick="' + b.id + '" data-st="no-asistio">No vino</button>') : pill(isPaid(b) ? "completada" : b.status, isPaid(b) ? { completada: "Cobrada" } : B_STATUS) + (b.status === "completada" ? (isPaid(b) ? "" : '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button>') + '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button>' : "")) + '</span></li>';
     }).join("") : '<li class="empty" style="display:block">No hay citas para hoy.</li>';
 
     // Pedidos por atender
@@ -1041,6 +1095,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       '<dt>Manicurista</dt><dd><span class="sdot" style="--c:' + staffColor(b.staff) + ';display:inline-block;margin-right:6px"></span>' + esc(b.staff) + '</dd>' +
       '<dt>Precio</dt><dd class="num"><div class="pay-cell" style="justify-items:start">' + money(bPrice(b)) + payPill(b) + (isPaid(b) ? '<span class="pill st-completada">Cobrada</span>' : "") + '</div></dd>' +
       (phone ? '<dt>WhatsApp</dt><dd class="num"><a href="https://wa.me/' + esc(wa) + '" target="_blank" rel="noopener">' + esc(b.phone) + '</a></dd>' : "") +
+      (b.codigo ? '<dt>Código</dt><dd><b class="num" style="letter-spacing:.12em">' + esc(b.codigo) + '</b> ' + (b.llego ? '<span class="pill st-completada">Llegó ' + esc(b.llego.slice(11, 16)) + '</span>' : '<span class="muted" style="font-weight:500">sin usar</span>') + '</dd>' : "") +
       (b.notes ? '<dt>Notas</dt><dd style="font-weight:500">' + esc(b.notes) + '</dd>' : "") +
       '<dt>Estado</dt><dd>' + statusSelect("bstatus", b.id, b.status || "confirmada", B_STATUS) + '</dd>' +
       '</dl>',
@@ -1172,7 +1227,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
       return head +
         '<td class="cell-main"><b>' + esc(o.name) + '</b><span class="num">' + esc(o.phone || "") + '</span></td><td style="font-size:13px">' + items + '</td>' +
         '<td>En línea<br><span class="muted" style="font-size:13px">' + (o.delivery === "envio" ? "Envío" + (o.address ? " · " + esc(o.address) : "") : "Recoge en salón") + '</span></td>' +
-        '<td class="r num"><div class="pay-cell"><b>' + money(o.total) + '</b>' + payPill(o) + '</div></td><td>' + statusSelect("ostatus", o.id, o.status || "nuevo", O_STATUS) + '</td><td><button type="button" class="linkbtn" data-tickete="' + esc(o.id) + '">Ticket</button></td></tr>';
+        '<td class="r num"><div class="pay-cell"><b>' + money(o.total) + '</b>' + payPill(o) + (o.codigo ? '<span class="muted" style="font-size:12px">Código ' + esc(o.codigo) + '</span>' : "") + '</div></td><td>' + statusSelect("ostatus", o.id, o.status || "nuevo", O_STATUS) + '</td><td><button type="button" class="linkbtn" data-tickete="' + esc(o.id) + '">Ticket</button></td></tr>';
     }).join("") : '<tr><td colspan="7" class="empty">No hay ventas con estos filtros.</td></tr>';
   }
   $("#orRows").addEventListener("change", function (e) {
