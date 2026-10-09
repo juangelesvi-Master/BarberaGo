@@ -39,8 +39,10 @@ hay que esperar 30 segundos. En **Cuenta** se cambia la contraseña y se cierra 
   ($ o %), pago en efectivo (con cambio), tarjeta o transferencia. Descuenta inventario, marca la cita
   como cobrada si vienes de "Cobrar" en la agenda, imprime el ticket y muestra la caja del día con
   su corte de caja por forma de pago. Cancelar una venta en **Ventas** regresa el inventario.
-- **Citas:** filtros por día, manicurista y estado; cambiar hora, día, servicio o manicurista
-  (sin encimar citas), marcar atendida / no asistió / cancelada, agregar o eliminar citas.
+- **Citas:** agenda del día con una columna por manicurista (horas, ocupación y total de cada una;
+  tocar un espacio libre agenda ahí y tocar una cita muestra sus opciones) y lista separada por
+  manicurista (hoy, próximas o historial). Cambiar hora, día, servicio o manicurista (sin encimar
+  citas), marcar atendida / no asistió / cancelada, cobrar, agregar o eliminar citas.
 - **Ventas:** ventas de mostrador y pedidos de la tienda en línea, con su estado.
 - **Productos:** agregar, editar, ocultar o eliminar productos, subir foto e inventario. La tienda
   marca "Agotado" y descuenta piezas en cada pedido.

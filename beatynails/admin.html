@@ -76,13 +76,13 @@ h1, h2, h3 { margin: 0; font-weight: 400; text-wrap: balance; }
 .side .foot { margin-top: auto; padding: 0 10px; font-size: 13px; color: var(--side-muted); display: grid; gap: 6px; }
 .side a { color: var(--side-ink); }
 
-main { padding: 28px 28px 60px; max-width: 1180px; width: 100%; }
+main { padding: 28px 28px 60px; max-width: 1180px; width: 100%; min-width: 0; }
 .page-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 22px; }
 .page-head h1 { font-family: var(--display); font-size: clamp(30px, 4vw, 42px); line-height: 1.05; }
 .page-head p { margin: 4px 0 0; color: var(--muted); }
 
 @media (max-width: 860px) {
-  .app { grid-template-columns: 1fr; }
+  .app { grid-template-columns: minmax(0, 1fr); }
   .side { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; height: auto; flex-direction: row; align-items: center; padding: 10px 16px; gap: 14px; overflow-x: auto; }
   .brand { font-size: 20px; padding: 0; white-space: nowrap; }
   .brand small, .side .foot { display: none; }
@@ -188,6 +188,50 @@ table.t .cell-main span { font-size: 13px; color: var(--muted); }
 table.t tr.off td { color: var(--muted); }
 table.t tr.off .cell-main b { text-decoration: line-through; }
 .thumb { width: 44px; height: 55px; object-fit: cover; border-radius: 7px; display: block; }
+/* Citas: agenda con una columna por manicurista */
+.daynav { display: flex; gap: 6px; align-items: center; }
+.daynav input { width: auto; }
+.staff-f { margin-bottom: 14px; }
+.staff-f .chip { display: inline-flex; align-items: center; gap: 7px; }
+.sdot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+.ag-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.ag { display: grid; grid-template-columns: 54px repeat(var(--cols), minmax(190px, 1fr)); min-width: min-content; }
+.ag-corner, .ag-times { position: sticky; left: 0; z-index: 3; background: var(--surface); border-right: 1px solid var(--line); }
+.ag-h { padding: 12px 14px; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); display: grid; gap: 2px; }
+.ag-h .nm { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.ag-h .sub { font-size: 12px; color: var(--muted); }
+.ag-corner { border-bottom: 1px solid var(--line); }
+.ag-times { position: sticky; }
+.ag-times span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ag-times span:first-child { transform: none; }
+.ag-col { position: relative; border-left: 1px solid var(--line); cursor: copy;
+  background-image: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px var(--hour)); }
+.ag-col.closed { background-color: var(--bg); cursor: default; }
+.ag-b { all: unset; box-sizing: border-box; position: absolute; left: 5px; right: 5px; border-radius: 8px; padding: 5px 8px; cursor: pointer; overflow: hidden;
+  background: color-mix(in srgb, var(--c) 13%, var(--surface)); border-left: 4px solid var(--c); display: grid; align-content: start; gap: 1px; font-size: 13px; line-height: 1.3; text-align: left; }
+.ag-b:hover { box-shadow: 0 2px 10px rgb(0 0 0 / .12); }
+.ag-b:focus-visible { outline: 2px solid var(--lacquer); outline-offset: 1px; }
+.ag-b .t { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ag-b b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-b .sv { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-b .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.ag-b .pill { font-size: 11px; padding: 1px 8px 1px 6px; }
+.ag-b.small { grid-template-columns: auto minmax(0, 1fr); gap: 6px; align-items: baseline; }
+.ag-b.small .sv, .ag-b.small .tags { display: none; }
+.ag-b.fin { background: color-mix(in srgb, var(--c) 6%, var(--surface)); }
+.ag-b.fin b { color: var(--muted); }
+.ag-b.miss { background: repeating-linear-gradient(135deg, var(--bg) 0 6px, var(--surface) 6px 12px); border-left-color: var(--muted); }
+.ag-b.miss b { text-decoration: line-through; color: var(--muted); }
+.ag-now { position: absolute; left: 0; right: 0; height: 2px; background: var(--bad); z-index: 2; pointer-events: none; }
+.ag-now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+.ag-note { padding: 10px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
+.staff-block { margin-bottom: 18px; }
+.staff-block h2 { display: flex; align-items: center; gap: 9px; font-family: var(--body); font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+.staff-block h2 .sub { font-size: 13px; font-weight: 500; color: var(--muted); }
+.bk-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 16px; margin: 0; font-size: 15px; }
+.bk-card dt { color: var(--muted); }
+.bk-card dd { margin: 0; font-weight: 600; }
+.bk-card dd a { color: var(--lacquer); }
 .actions { display: flex; gap: 12px; justify-content: end; white-space: nowrap; }
 .low { color: var(--warn); font-weight: 700; }
 .zero { color: var(--bad); font-weight: 700; }
@@ -399,27 +443,31 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
     <!-- CITAS -->
     <section data-view="citas" hidden>
       <div class="page-head">
-        <div><h1>Citas</h1><p>Cambia la hora, la manicurista o el estado de cada cita.</p></div>
+        <div><h1>Citas</h1><p id="bkSub">La agenda de cada manicurista.</p></div>
         <button type="button" class="btn btn-primary" id="newBooking">+ Nueva cita</button>
       </div>
       <div class="toolbar">
+        <div class="chips" id="bkMode" role="group" aria-label="Vista">
+          <button type="button" class="chip" data-mode="agenda">Agenda del día</button>
+          <button type="button" class="chip" data-mode="lista">Lista</button>
+        </div>
+        <div class="daynav" id="bkDayNav">
+          <button type="button" class="btn btn-line btn-sm" data-day="-1" aria-label="Día anterior">‹</button>
+          <input type="date" id="bkDay" aria-label="Día">
+          <button type="button" class="btn btn-line btn-sm" data-day="1" aria-label="Día siguiente">›</button>
+          <button type="button" class="btn btn-line btn-sm" data-day="0">Hoy</button>
+        </div>
         <div class="chips" id="bkView" role="group" aria-label="Mostrar">
           <button type="button" class="chip" data-view-b="hoy">Hoy</button>
           <button type="button" class="chip" data-view-b="proximas">Próximas</button>
           <button type="button" class="chip" data-view-b="historial">Historial</button>
-          <button type="button" class="chip" data-view-b="dia">Un día</button>
         </div>
-        <input type="date" id="bkDay" aria-label="Día">
-        <select id="bkStaffF" aria-label="Manicurista"></select>
         <select id="bkStatusF" aria-label="Estado"></select>
         <input id="bkSearch" class="grow" placeholder="Buscar cliente o teléfono" aria-label="Buscar">
       </div>
-      <div class="table-wrap">
-        <table class="t">
-          <thead><tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Manicurista</th><th class="r">Precio</th><th>Estado</th><th></th></tr></thead>
-          <tbody id="bkRows"></tbody>
-        </table>
-      </div>
+      <div class="chips staff-f" id="bkStaffF" role="group" aria-label="Manicurista"></div>
+      <div id="bkAgenda"></div>
+      <div id="bkList"></div>
     </section>
 
     <!-- VENTAS -->
@@ -847,7 +895,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   function setBookingStatus(id, st) { var all = BN.bookings(); all.forEach(function (b) { if (b.id === id) b.status = st; }); saveOr("bn_bookings", all); }
   function setOrderStatus(id, st) { var all = BN.orders(); all.forEach(function (o) { if (o.id === id) o.status = st; }); saveOr("bn_orders", all); }
   document.addEventListener("click", function (e) {
-    var q = e.target.closest("[data-quick]"); if (q) { setBookingStatus(q.dataset.quick, q.dataset.st); toast("Cita marcada como " + B_STATUS[q.dataset.st].toLowerCase()); render(); return; }
+    var q = e.target.closest("[data-quick]"); if (q) { if (!$("#drawer").hidden) closeDrawer(); setBookingStatus(q.dataset.quick, q.dataset.st); toast("Cita marcada como " + B_STATUS[q.dataset.st].toLowerCase()); render(); return; }
     var o = e.target.closest("[data-oquick]"); if (o) { setOrderStatus(o.dataset.oquick, o.dataset.st); toast("Pedido " + o.dataset.oquick + ": " + O_STATUS[o.dataset.st].toLowerCase()); render(); return; }
     var g = e.target.closest("[data-goto]"); if (g) { go(g.dataset.goto); return; }
     var tb = e.target.closest("[data-ticketb]"); if (tb) {
@@ -865,52 +913,158 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   });
 
   // ---------- Citas ----------
-  var bkView = "hoy";
+  // Dos vistas: la agenda del día con una columna por manicurista, y la lista agrupada por manicurista.
+  var bkMode = "agenda", bkView = "hoy", bkStaff = "", PX = 1.6; // PX: alto en píxeles por minuto
+  var STAFF_COLORS = ["#b8325f", "#6e4a9e", "#2c7a6b", "#c2761a", "#3d6fb6", "#8a5a3c", "#a23d8f", "#4f7a28"];
+  function staffColor(name) { var i = BN.staff().indexOf(name); if (i < 0) { i = 0; for (var k = 0; k < name.length; k++) i += name.charCodeAt(k); } return STAFF_COLORS[i % STAFF_COLORS.length]; }
   $("#bkDay").value = TODAY;
   $("#bkStatusF").innerHTML = '<option value="">Todos los estados</option>' + Object.keys(B_STATUS).map(function (k) { return '<option value="' + k + '">' + B_STATUS[k] + '</option>'; }).join("");
+  $("#bkMode").addEventListener("click", function (e) { var b = e.target.closest("[data-mode]"); if (!b) return; bkMode = b.dataset.mode; renderCitas(); });
   $("#bkView").addEventListener("click", function (e) { var b = e.target.closest("[data-view-b]"); if (!b) return; bkView = b.dataset.viewB; renderCitas(); });
-  $("#bkDay").addEventListener("change", function () { bkView = "dia"; renderCitas(); });
-  ["#bkStaffF", "#bkStatusF"].forEach(function (s) { $(s).addEventListener("change", renderCitas); });
+  $("#bkStaffF").addEventListener("click", function (e) { var b = e.target.closest("[data-sf]"); if (!b) return; bkStaff = b.dataset.sf; renderCitas(); });
+  $("#bkDayNav").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-day]"); if (!b) return;
+    $("#bkDay").value = +b.dataset.day ? BN.addDays($("#bkDay").value || TODAY, +b.dataset.day) : TODAY; renderCitas();
+  });
+  $("#bkDay").addEventListener("change", renderCitas);
+  $("#bkStatusF").addEventListener("change", renderCitas);
   $("#bkSearch").addEventListener("input", renderCitas);
 
+  function bkMatch(b) {
+    var st = $("#bkStatusF").value, q = $("#bkSearch").value.trim().toLowerCase();
+    if (st && b.status !== st) return false;
+    if (q && (b.name + " " + (b.phone || "")).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  }
+  function staffNames(list) {
+    var names = BN.staff().slice();
+    list.forEach(function (b) { if (b.staff && names.indexOf(b.staff) < 0) names.push(b.staff); });
+    return names;
+  }
+  function staffChips(list) {
+    var names = staffNames(list); if (bkStaff && names.indexOf(bkStaff) < 0) bkStaff = "";
+    var count = function (n) { return list.filter(function (b) { return (!n || b.staff === n) && b.status !== "cancelada"; }).length; };
+    $("#bkStaffF").innerHTML = '<button type="button" class="chip" data-sf="" aria-pressed="' + !bkStaff + '">Todas (' + count("") + ')</button>' +
+      names.map(function (n) { return '<button type="button" class="chip" data-sf="' + esc(n) + '" aria-pressed="' + (n === bkStaff) + '"><span class="sdot" style="--c:' + staffColor(n) + '"></span>' + esc(n) + ' (' + count(n) + ')</button>'; }).join("");
+    return bkStaff ? [bkStaff] : names;
+  }
+
   function renderCitas() {
-    var staff = BN.staff(), sf = $("#bkStaffF").value;
-    $("#bkStaffF").innerHTML = '<option value="">Todas las manicuristas</option>' + staff.map(function (n) { return '<option' + (n === sf ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("");
+    document.querySelectorAll("#bkMode [data-mode]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.mode === bkMode); });
     document.querySelectorAll("#bkView [data-view-b]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.viewB === bkView); });
-    $("#bkDay").hidden = bkView !== "dia";
-    var st = $("#bkStatusF").value, q = $("#bkSearch").value.trim().toLowerCase(), day = $("#bkDay").value;
+    var agenda = bkMode === "agenda";
+    $("#bkDayNav").hidden = !agenda; $("#bkView").hidden = agenda;
+    $("#bkAgenda").hidden = !agenda; $("#bkList").hidden = agenda;
+    if (agenda) renderAgenda(); else renderList();
+  }
+
+  function renderAgenda() {
+    var day = $("#bkDay").value || TODAY, all = BN.bookings();
+    var dayList = all.filter(function (b) { return b.date === day && bkMatch(b); });
+    var cols = staffChips(dayList);
+    $("#bkSub").textContent = BN.niceDate(day) + (day === TODAY ? " · hoy" : "");
+    var h = BN.hours()[BN.parseDate(day).getDay()], from = h ? h[0] : 540, to = h ? h[1] : 1260;
+    var live = dayList.filter(function (b) { return b.status !== "cancelada"; });
+    live.forEach(function (b) { from = Math.min(from, b.start); to = Math.max(to, b.start + b.min); });
+    from = Math.floor(from / 60) * 60; to = Math.ceil(to / 60) * 60;
+    var H = (to - from) * PX, now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
+    var times = ""; for (var m = from; m < to; m += 60) times += '<span style="top:' + (m - from) * PX + 'px">' + hm(m) + '</span>';
+    var head = '<div class="ag-corner"></div>', body = '<div class="ag-times" style="height:' + H + 'px">' + times + '</div>';
+    cols.forEach(function (n) {
+      var mine = live.filter(function (b) { return b.staff === n; }).sort(bookingSort);
+      var cancelled = dayList.filter(function (b) { return b.staff === n && b.status === "cancelada"; }).length;
+      var total = mine.filter(function (b) { return b.status !== "no-asistio"; }).reduce(function (a, b) { return a + bPrice(b); }, 0);
+      var used = mine.reduce(function (a, b) { return a + b.min; }, 0), open = h ? h[1] - h[0] : 0;
+      head += '<div class="ag-h"><span class="nm"><span class="sdot" style="--c:' + staffColor(n) + '"></span>' + esc(n) + '</span><span class="sub num">' +
+        (mine.length ? mine.length + (mine.length === 1 ? " cita" : " citas") + " · " + money(total) + (open ? " · " + Math.round(used / open * 100) + "% ocupada" : "") : h ? "Libre todo el día" : "Cerrado") +
+        (cancelled ? " · " + cancelled + (cancelled === 1 ? " cancelada" : " canceladas") : "") + '</span></div>';
+      body += '<div class="ag-col' + (h ? "" : " closed") + '" data-col="' + esc(n) + '" data-from="' + from + '" style="height:' + H + 'px;--hour:' + 60 * PX + 'px">' +
+        mine.map(function (b) {
+          var ht = Math.max(b.min * PX, 26) - 3, small = ht < 56, cls = b.status === "no-asistio" ? " miss" : b.status === "completada" ? " fin" : "";
+          var tags = (isPaid(b) ? '<span class="pill st-completada">Cobrada</span>' : b.status !== "confirmada" ? pill(b.status, B_STATUS) : "") + payPill(b);
+          return '<button type="button" class="ag-b' + cls + (small ? " small" : "") + '" data-open="' + esc(b.id) + '" style="top:' + ((b.start - from) * PX + 1) + 'px;height:' + ht + 'px;--c:' + staffColor(n) + '" aria-label="' + esc(hm(b.start) + " " + b.name + ", " + svcName(b)) + '">' +
+            '<span class="t">' + hm(b.start) + (small ? "" : " – " + hm(b.start + b.min)) + '</span><b>' + esc(b.name) + '</b><span class="sv">' + esc(svcName(b)) + '</span>' + (tags ? '<span class="tags">' + tags + '</span>' : "") + '</button>';
+        }).join("") +
+        (day === TODAY && nowMin > from && nowMin < to ? '<div class="ag-now" style="top:' + (nowMin - from) * PX + 'px"></div>' : "") + '</div>';
+    });
+    $("#bkAgenda").innerHTML = '<div class="ag-wrap"><div class="ag" style="--cols:' + cols.length + '">' + head + body + '</div>' +
+      '<div class="ag-note">' + (h ? "Toca un espacio libre para agendar ahí, o una cita para ver sus opciones." : "El salón está cerrado este día.") + '</div></div>';
+  }
+  // Tocar un espacio libre de una columna abre "Nueva cita" con esa manicurista y esa hora
+  $("#bkAgenda").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-open]"); if (b) { openBookingCard(b.dataset.open); return; }
+    var col = e.target.closest(".ag-col"); if (!col || col.classList.contains("closed")) return;
+    var step = BN.settings().step, y = e.clientY - col.getBoundingClientRect().top;
+    var start = +col.dataset.from + Math.floor(y / PX / step) * step;
+    openBooking(null, { staff: col.dataset.col, date: $("#bkDay").value || TODAY, start: start });
+  });
+
+  function renderList() {
     var rows = BN.bookings().filter(function (b) {
       if (bkView === "hoy" && b.date !== TODAY) return false;
       if (bkView === "proximas" && b.date < TODAY) return false;
       if (bkView === "historial" && b.date >= TODAY) return false;
-      if (bkView === "dia" && b.date !== day) return false;
-      if (sf && b.staff !== sf) return false;
-      if (st && b.status !== st) return false;
-      if (q && (b.name + " " + (b.phone || "")).toLowerCase().indexOf(q) < 0) return false;
-      return true;
+      return bkMatch(b);
     }).sort(bookingSort);
     if (bkView === "historial") rows.reverse();
-    var html = "", lastDate = "";
-    rows.forEach(function (b) {
-      if (b.date !== lastDate) { lastDate = b.date; html += '<tr class="day"><td colspan="7">' + esc(BN.niceDate(b.date)) + (b.date === TODAY ? " · hoy" : "") + '</td></tr>'; }
-      html += '<tr class="' + (b.status === "cancelada" ? "off" : "") + '"><td class="num"><b>' + hm(b.start) + '</b><br><span class="muted">' + hm(b.start + b.min) + '</span></td>' +
-        '<td class="cell-main"><b>' + esc(b.name) + '</b><span class="num">' + esc(b.phone || "") + (b.notes ? " · " + esc(b.notes) : "") + '</span></td>' +
-        '<td>' + esc(svcName(b)) + '</td><td>' + esc(b.staff) + '</td><td class="r num"><div class="pay-cell">' + money(bPrice(b)) + payPill(b) + '</div></td>' +
-        '<td>' + statusSelect("bstatus", b.id, b.status || "confirmada", B_STATUS) + '</td>' +
-        '<td><div class="actions">' + (b.status !== "cancelada" && b.status !== "no-asistio" && !isPaid(b) ? '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button>' : isPaid(b) ? '<span class="pill st-completada">Cobrada</span>' : "") + '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button><button type="button" class="linkbtn" data-editb="' + esc(b.id) + '">Cambiar</button><button type="button" class="linkbtn danger" data-delb="' + esc(b.id) + '">Eliminar</button></div></td></tr>';
-    });
-    $("#bkRows").innerHTML = html || '<tr><td colspan="7" class="empty">No hay citas con estos filtros.</td></tr>';
+    var cols = staffChips(rows);
+    $("#bkSub").textContent = { hoy: "Citas de hoy", proximas: "Citas de hoy en adelante", historial: "Citas pasadas" }[bkView] + ", separadas por manicurista.";
+    var html = cols.map(function (n) {
+      var mine = rows.filter(function (b) { return b.staff === n; });
+      if (!mine.length && !bkStaff) return "";
+      var valid = mine.filter(function (b) { return b.status !== "cancelada" && b.status !== "no-asistio"; });
+      var body = "", lastDate = "";
+      mine.forEach(function (b) {
+        if (b.date !== lastDate) { lastDate = b.date; body += '<tr class="day"><td colspan="6">' + esc(BN.niceDate(b.date)) + (b.date === TODAY ? " · hoy" : "") + '</td></tr>'; }
+        body += '<tr class="' + (b.status === "cancelada" ? "off" : "") + '"><td class="num"><b>' + hm(b.start) + '</b><br><span class="muted">' + hm(b.start + b.min) + '</span></td>' +
+          '<td class="cell-main"><b>' + esc(b.name) + '</b><span class="num">' + esc(b.phone || "") + (b.notes ? " · " + esc(b.notes) : "") + '</span></td>' +
+          '<td>' + esc(svcName(b)) + '</td><td class="r num"><div class="pay-cell">' + money(bPrice(b)) + payPill(b) + '</div></td>' +
+          '<td>' + statusSelect("bstatus", b.id, b.status || "confirmada", B_STATUS) + '</td>' +
+          '<td><div class="actions">' + (b.status !== "cancelada" && b.status !== "no-asistio" && !isPaid(b) ? '<button type="button" class="linkbtn" data-charge="' + esc(b.id) + '">Cobrar</button>' : isPaid(b) ? '<span class="pill st-completada">Cobrada</span>' : "") + '<button type="button" class="linkbtn" data-ticketb="' + esc(b.id) + '">Ticket</button><button type="button" class="linkbtn" data-editb="' + esc(b.id) + '">Cambiar</button><button type="button" class="linkbtn danger" data-delb="' + esc(b.id) + '">Eliminar</button></div></td></tr>';
+      });
+      return '<div class="staff-block"><h2><span class="sdot" style="--c:' + staffColor(n) + '"></span>' + esc(n) + '<span class="sub num">' + valid.length + (valid.length === 1 ? " cita" : " citas") + ' · ' + money(valid.reduce(function (a, b) { return a + bPrice(b); }, 0)) + '</span></h2>' +
+        '<div class="table-wrap"><table class="t"><thead><tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th class="r">Precio</th><th>Estado</th><th></th></tr></thead><tbody>' +
+        (body || '<tr><td colspan="6" class="empty">Sin citas.</td></tr>') + '</tbody></table></div></div>';
+    }).join("");
+    $("#bkList").innerHTML = html || '<div class="table-wrap"><p class="empty">No hay citas con estos filtros.</p></div>';
   }
-  $("#bkRows").addEventListener("change", function (e) {
+
+  // Detalle de una cita (desde la agenda) con sus acciones
+  function openBookingCard(id) {
+    var b = BN.bookings().find(function (x) { return x.id === id; }); if (!b) return;
+    var phone = (b.phone || "").replace(/\D/g, ""), wa = phone.length === 10 ? "52" + phone : phone;
+    openDrawer(b.name,
+      '<dl class="bk-card">' +
+      '<dt>Día</dt><dd>' + esc(BN.niceDate(b.date)) + '</dd>' +
+      '<dt>Hora</dt><dd class="num">' + hm(b.start) + ' a ' + hm(b.start + b.min) + '</dd>' +
+      '<dt>Servicio</dt><dd>' + esc(svcName(b)) + '</dd>' +
+      '<dt>Manicurista</dt><dd><span class="sdot" style="--c:' + staffColor(b.staff) + ';display:inline-block;margin-right:6px"></span>' + esc(b.staff) + '</dd>' +
+      '<dt>Precio</dt><dd class="num"><div class="pay-cell" style="justify-items:start">' + money(bPrice(b)) + payPill(b) + (isPaid(b) ? '<span class="pill st-completada">Cobrada</span>' : "") + '</div></dd>' +
+      (phone ? '<dt>WhatsApp</dt><dd class="num"><a href="https://wa.me/' + esc(wa) + '" target="_blank" rel="noopener">' + esc(b.phone) + '</a></dd>' : "") +
+      (b.notes ? '<dt>Notas</dt><dd style="font-weight:500">' + esc(b.notes) + '</dd>' : "") +
+      '<dt>Estado</dt><dd>' + statusSelect("bstatus", b.id, b.status || "confirmada", B_STATUS) + '</dd>' +
+      '</dl>',
+      '<button type="button" class="btn btn-danger" data-delb="' + esc(b.id) + '">Eliminar</button>' +
+      '<button type="button" class="btn btn-line" data-ticketb="' + esc(b.id) + '">Ticket</button>' +
+      '<button type="button" class="btn btn-line" data-editb="' + esc(b.id) + '">Cambiar</button>' +
+      (b.status === "confirmada" ? '<button type="button" class="btn btn-line" data-quick="' + esc(b.id) + '" data-st="no-asistio">No vino</button>' : "") +
+      (b.status !== "cancelada" && b.status !== "no-asistio" && !isPaid(b) ? '<button type="button" class="btn btn-primary" data-charge="' + esc(b.id) + '">Cobrar</button>' : ""),
+      null);
+  }
+
+  // Acciones de cita (lista, agenda y detalle)
+  document.addEventListener("change", function (e) {
     var s = e.target.closest("[data-bstatus]"); if (!s) return;
-    setBookingStatus(s.dataset.bstatus, s.value); toast("Estado actualizado"); render();
+    setBookingStatus(s.dataset.bstatus, s.value); toast("Estado actualizado");
+    if (!$("#drawer").hidden) closeDrawer();
+    render();
   });
-  $("#bkRows").addEventListener("click", function (e) {
+  document.addEventListener("click", function (e) {
     var ed = e.target.closest("[data-editb]"); if (ed) { openBooking(ed.dataset.editb); return; }
     var del = e.target.closest("[data-delb]");
-    if (del && twoStep(del, "¿Eliminar?")) { saveOr("bn_bookings", BN.bookings().filter(function (b) { return b.id !== del.dataset.delb; })); toast("Cita eliminada"); render(); }
+    if (del && twoStep(del, "¿Eliminar?")) { saveOr("bn_bookings", BN.bookings().filter(function (b) { return b.id !== del.dataset.delb; })); if (!$("#drawer").hidden) closeDrawer(); toast("Cita eliminada"); render(); }
   });
-  $("#newBooking").addEventListener("click", function () { openBooking(null); });
+  $("#newBooking").addEventListener("click", function () { openBooking(null, bkMode === "agenda" ? { date: $("#bkDay").value || TODAY, staff: bkStaff || undefined } : null); });
 
   // ---------- Cajón de edición ----------
   var onSave = null;
@@ -932,9 +1086,10 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   function showErr(msg) { var el = $("#drErr"); el.textContent = msg; el.hidden = !msg; }
   var FOOT = '<button type="button" class="btn btn-line" data-cancel>Cancelar</button><button type="button" class="btn btn-primary" data-save>Guardar</button>';
 
-  function openBooking(id) {
+  function openBooking(id, preset) {
     var all = BN.bookings(), services = BN.services(), staff = BN.staff();
     var b = id ? all.find(function (x) { return x.id === id; }) : { name: "", phone: "", service: services[0].id, staff: staff[0], date: TODAY, start: null, status: "confirmada", notes: "" };
+    if (!id && preset) { if (preset.staff) b.staff = preset.staff; if (preset.date) b.date = preset.date; if (preset.start != null) b.start = preset.start; }
     openDrawer(id ? "Cambiar cita" : "Nueva cita",
       '<div class="err" id="drErr" hidden></div>' +
       '<div class="two"><label class="f" for="eName">Clienta<input id="eName" value="' + esc(b.name) + '"></label><label class="f" for="ePhone">WhatsApp<input id="ePhone" type="tel" value="' + esc(b.phone || "") + '"></label></div>' +
