@@ -15,6 +15,6 @@ dalvik-exchange --dex --min-sdk-version=23 --output=build/classes.dex build/clas
 (cd build && aapt add app.unaligned.apk classes.dex >/dev/null)
 zipalign -f -p 4 build/app.unaligned.apk build/app.aligned.apk
 mkdir -p "$(dirname "$OUT")"
-apksigner sign --ks "$KEYSTORE" --ks-pass env:KEYPASS --key-pass env:KEYPASS --out "$OUT" build/app.aligned.apk
+apksigner sign --v4-signing-enabled false --ks "$KEYSTORE" --ks-pass env:KEYPASS --key-pass env:KEYPASS --out "$OUT" build/app.aligned.apk
 apksigner verify --print-certs "$OUT" | head -3
 ls -l "$OUT"
