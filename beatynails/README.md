@@ -133,8 +133,8 @@ cambiar, pero el cambio vale solo en ese navegador o teléfono. Ojo: como la pá
 evita que cualquiera entre por accidente, pero no es una protección fuerte; la protección de verdad
 llega cuando los datos pasen a Supabase con su propio acceso.
 
-La app para Android (`descargas/beatynails-panel.apk`) abre `https://beautynails.restorago.com/admin.html`
-dentro de la app, así que siempre tiene la versión publicada. Se descarga desde la pantalla de entrada,
+La app para Android (`descargas/beatynails-panel.apk`) abre la página principal
+(`https://beautynails.restorago.com/index.html`) y desde el pie se entra al panel, así que siempre tiene la versión publicada. Se descarga desde la pantalla de entrada,
 desde **Cuenta** y desde el pie de la página. Su código está en `beatynails-app/` y se compila con
 `beatynails-app/build.sh` (instrucciones dentro). Hay que firmar siempre con la misma llave para que
 Android deje instalar las actualizaciones encima.

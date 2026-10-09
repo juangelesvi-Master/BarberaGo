@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Panel BeatyNails</title>
 <meta name="robots" content="noindex">
-<script src="auth.js?v=20261009c"></script>
+<script src="auth.js?v=20261009d"></script>
 <script>if (!Auth.guard("entrar.html")) document.documentElement.style.visibility = "hidden";</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -657,7 +657,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
           <h2>Cómo funciona el acceso</h2>
           <p class="hint" style="font-size:14px;line-height:1.6">Se entra con el usuario <b>beauty</b>. Si cambias la contraseña aquí, el cambio vale solo en este navegador o teléfono, donde también se guardan las citas y ventas; en los demás se sigue entrando con la contraseña de siempre.</p>
         </div>
-        <div class="card">
+        <div class="card" id="apkCard">
           <h2>App para Android</h2>
           <p class="hint" style="font-size:14px;line-height:1.6;margin-bottom:12px">Instala el panel como app en un teléfono o tableta Android. Al abrir el archivo, Android pide permiso para instalar apps de fuera de la Play Store.</p>
           <a class="btn btn-primary" href="descargas/beatynails-panel.apk" download>Descargar app (APK)</a>
@@ -726,9 +726,9 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
 <div class="toast" id="toast" hidden role="status"></div>
 <div id="printArea" aria-hidden="true"></div>
 
-<script src="datos.js?v=20261009c"></script>
-<script src="ticket.js?v=20261009c"></script>
-<script src="pagos.js?v=20261009c"></script>
+<script src="datos.js?v=20261009d"></script>
+<script src="ticket.js?v=20261009d"></script>
+<script src="pagos.js?v=20261009d"></script>
 <script>
 (function () {
   BN.seed();
@@ -1367,7 +1367,7 @@ table.t tr.off .cell-main b { text-decoration: line-through; }
   });
 
   // ---------- Cuenta ----------
-  function renderCuenta() { $("#acctUser").textContent = "Usuario: " + Auth.name(); $("#pwMsg").textContent = ""; }
+  function renderCuenta() { $("#apkCard").hidden = /BeatyNailsApp/.test(navigator.userAgent); $("#acctUser").textContent = "Usuario: " + Auth.name(); $("#pwMsg").textContent = ""; }
   $("#logout").addEventListener("click", function () { Auth.logout(); location.replace("entrar.html"); });
   $("#pwForm").addEventListener("submit", function (e) {
     e.preventDefault();

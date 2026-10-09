@@ -12,10 +12,10 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-/** Panel del salón BeatyNails: abre beautynails.restorago.com dentro de la app. */
+/** BeatyNails: abre la página del salón (y desde ahí el panel) dentro de la app. */
 public class MainActivity extends Activity {
     static final String HOST = "beautynails.restorago.com";
-    static final String START = "https://" + HOST + "/admin.html";
+    static final String START = "https://" + HOST + "/index.html";
 
     WebView web;
 
@@ -29,7 +29,7 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
-        s.setUserAgentString(s.getUserAgentString() + " BeatyNailsApp/1.0");
+        s.setUserAgentString(s.getUserAgentString() + " BeatyNailsApp/1.1");
 
         web.setWebChromeClient(new WebChromeClient());
         web.setWebViewClient(new WebViewClient() {

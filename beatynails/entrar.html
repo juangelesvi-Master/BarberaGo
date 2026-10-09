@@ -107,7 +107,7 @@ input { border: 1px solid var(--line); background: var(--bg); border-radius: 10p
   <p class="foot" id="footBack"><a href="index.html">← Volver a la página del salón</a></p>
 </main>
 
-<script src="auth.js?v=20261009c"></script>
+<script src="auth.js?v=20261009d"></script>
 <script>
 (function () {
   var $ = function (s) { return document.querySelector(s); };
@@ -131,8 +131,8 @@ input { border: 1px solid var(--line); background: var(--bg); border-radius: 10p
   }
   if (Auth.session()) return enter();
   $("#lLinks").hidden = !Auth.canRecover();
-  // Dentro de la app ya no hace falta ofrecer la app ni volver a la página de clientas
-  if (/BeatyNailsApp/.test(navigator.userAgent)) { $("#apkLink").hidden = true; $("#footBack").hidden = true; }
+  // Dentro de la app ya no hace falta ofrecer la app
+  if (/BeatyNailsApp/.test(navigator.userAgent)) $("#apkLink").hidden = true;
   show("fLogin");
 
   document.addEventListener("click", function (e) {
