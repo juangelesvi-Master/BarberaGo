@@ -18,8 +18,6 @@
     hours: { 0: null, 1: [600, 1200], 2: [600, 1200], 3: [600, 1200], 4: [600, 1200], 5: [600, 1200], 6: [600, 1080] },
     settings: {
       step: 30, shipping: 99, freeFrom: 800,
-      // Código de 4 números por SMS para confirmar la cita (demo: se muestra en pantalla, no se manda)
-      codigo: { activo: true, demo: true },
       // Cobro en línea: la llave secreta vive en la función del servidor, nunca aquí
       pagos: {
         url: "", key: "", demo: true, mp: true, stripe: true,
