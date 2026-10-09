@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BeatyNails</title>
+<meta name="description" content="BeatyNails: salón de uñas. Reserva tu cita en línea y compra esmaltes, aceites y kits en nuestra tienda.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: barra superior fija, portada de dos columnas, luego secciones apiladas
+   (servicios, reserva, tienda, contacto) en una columna de hasta 1120px. */
+:root {
+  --bg: #fbf6f7;
+  --surface: #ffffff;
+  --ink: #2a1520;
+  --muted: #7a6470;
+  --line: #ecdfe4;
+  --lacquer: #8c1d40;       /* rojo laca, el acento */
+  --lacquer-ink: #ffffff;
+  --blush: #f6dbe3;
+  --chrome: #c9bcc4;
+  --ok: #1e7a4c;
+  --display: "Gloock", "Didot", "Bodoni 72", Georgia, serif;
+  --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --r: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #170d12; --surface: #22141b; --ink: #f7e9ee; --muted: #b8a0ab; --line: #3a2530;
+    --lacquer: #e0577f; --lacquer-ink: #1a0b11; --blush: #3b1d29; --chrome: #5b4651; --ok: #5fcf95;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #170d12; --surface: #22141b; --ink: #f7e9ee; --muted: #b8a0ab; --line: #3a2530;
+  --lacquer: #e0577f; --lacquer-ink: #1a0b11; --blush: #3b1d29; --chrome: #5b4651; --ok: #5fcf95;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); }
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--lacquer); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; line-height: 1.08; text-wrap: balance; margin: 0; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; }
+.eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--lacquer); font-weight: 700; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Barra superior */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 16px; min-height: 64px; }
+.logo { font-family: var(--display); font-size: 26px; text-decoration: none; letter-spacing: -.01em; }
+.logo span { color: var(--lacquer); }
+.nav { display: flex; gap: 22px; margin-left: auto; }
+.nav a { text-decoration: none; font-weight: 500; font-size: 15px; color: var(--muted); }
+.nav a:hover { color: var(--ink); }
+.cart-btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.cart-btn b { background: var(--lacquer); color: var(--lacquer-ink); border-radius: 999px; min-width: 22px; padding: 0 6px; font-size: 12px; line-height: 22px; text-align: center; }
+@media (max-width: 720px) { .nav { display: none; } .cart-btn { margin-left: auto; } }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px; padding: 13px 22px; font-weight: 600; cursor: pointer; text-decoration: none; }
+.btn-primary { background: var(--lacquer); color: var(--lacquer-ink); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; border: 1px solid var(--ink); color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Portada */
+.hero { padding-block: 56px 40px; }
+.hero .wrap { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; }
+.hero h1 { font-size: clamp(44px, 7vw, 84px); letter-spacing: -.02em; }
+.hero h1 em { font-style: normal; color: var(--lacquer); }
+.hero p { font-size: 18px; max-width: 46ch; color: var(--muted); margin: 18px 0 26px; }
+.hero .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.facts { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 34px; font-size: 14px; color: var(--muted); }
+.facts strong { display: block; font-family: var(--display); font-size: 28px; color: var(--ink); font-weight: 400; }
+.swatches { position: relative; aspect-ratio: 1 / 1; max-width: 100%; border-radius: 28px; background: var(--blush); overflow: hidden; }
+.swatches svg { width: 100%; height: 100%; display: block; }
+@media (max-width: 820px) { .hero .wrap { grid-template-columns: 1fr; } .swatches { max-width: 420px; } }
+
+section.block { padding-block: 64px; border-top: 1px solid var(--line); }
+.head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+.head h2 { font-size: clamp(34px, 4.5vw, 52px); margin-top: 6px; }
+.head p { max-width: 48ch; margin: 0; color: var(--muted); }
+
+/* Servicios: carta de precios */
+.menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; }
+.svc { display: grid; grid-template-columns: 1fr auto; gap: 2px 16px; padding: 18px 0; border-bottom: 1px dashed var(--line); }
+.svc h3 { font-family: var(--body); font-weight: 600; font-size: 18px; }
+.svc .price { font-family: var(--display); font-size: 22px; }
+.svc p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 14px; }
+.svc .dur { font-size: 13px; color: var(--muted); }
+.svc button { grid-column: 1 / -1; justify-self: start; margin-top: 6px; background: none; border: 0; padding: 0; color: var(--lacquer); font-weight: 600; cursor: pointer; font-size: 14px; }
+@media (max-width: 720px) { .menu { grid-template-columns: 1fr; } }
+
+/* Reserva */
+.booking { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); gap: 28px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; }
+.step { display: grid; gap: 10px; padding-block: 0 22px; }
+.step + .step { border-top: 1px solid var(--line); padding-top: 20px; }
+.step-title { font-weight: 700; font-size: 15px; display: flex; gap: 10px; align-items: center; }
+.step-title i { font-style: normal; width: 24px; height: 24px; border-radius: 50%; background: var(--blush); color: var(--lacquer); display: grid; place-items: center; font-size: 13px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+label.f { display: grid; gap: 6px; font-size: 14px; font-weight: 500; }
+input, select, textarea { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 11px 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 8px 14px; cursor: pointer; font-size: 14px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip:disabled { text-decoration: line-through; opacity: .4; cursor: not-allowed; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.slots .chip { text-align: center; padding: 8px 4px; }
+.summary dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 14px 0 18px; font-size: 15px; }
+.summary dt { color: var(--muted); }
+.summary dd { margin: 0; text-align: right; font-weight: 600; }
+.summary .total { border-top: 1px solid var(--line); padding-top: 12px; display: flex; justify-content: space-between; font-family: var(--display); font-size: 26px; }
+.note { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+.msg { border-radius: 10px; padding: 12px 14px; font-size: 14px; margin-top: 14px; background: var(--blush); }
+.msg.ok { background: color-mix(in srgb, var(--ok) 14%, var(--surface)); color: var(--ink); }
+.mine { margin-top: 18px; }
+.mine h3 { font-family: var(--body); font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.mine ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.mycode { font-size: 13px; color: var(--lacquer); font-weight: 600; }
+.mycode b { letter-spacing: .12em; }
+.mine li { display: flex; justify-content: space-between; gap: 10px; align-items: center; font-size: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.linkbtn { background: none; border: 0; color: var(--lacquer); cursor: pointer; font-weight: 600; font-size: 13px; padding: 0; }
+@media (max-width: 860px) { .booking { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* Tienda */
+.filters { margin-bottom: 22px; }
+.products { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 22px; }
+.prod { display: grid; grid-template-rows: auto 1fr; gap: 12px; }
+.prod .ph { aspect-ratio: 4 / 5; max-width: 100%; border-radius: var(--r); overflow: hidden; background: var(--blush); position: relative; }
+.prod .ph img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.prod:hover .ph img { transform: scale(1.04); }
+.tag { position: absolute; top: 10px; left: 10px; background: var(--surface); color: var(--ink); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; }
+.prod .info { display: grid; gap: 4px; align-content: start; }
+.prod h3 { font-family: var(--body); font-size: 16px; font-weight: 600; }
+.prod p { margin: 0; font-size: 14px; color: var(--muted); }
+.prod .row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }
+.prod .price { font-family: var(--display); font-size: 22px; }
+.add { border: 1px solid var(--ink); background: transparent; border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
+.add:hover { background: var(--ink); color: var(--bg); }
+
+/* Carrito */
+.scrim { position: fixed; inset: 0; background: rgb(20 8 14 / .45); z-index: 40; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 100%); background: var(--surface); z-index: 41; display: grid; grid-template-rows: auto 1fr auto; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: -20px 0 50px rgb(0 0 0 / .18); }
+.drawer header, .drawer footer { padding: 18px 20px; border-bottom: 1px solid var(--line); }
+.drawer footer { border-bottom: 0; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+.drawer header { display: flex; justify-content: space-between; align-items: center; }
+.drawer h2 { font-size: 28px; }
+.x { background: none; border: 0; font-size: 26px; line-height: 1; cursor: pointer; color: var(--muted); }
+.lines { overflow-y: auto; padding: 8px 20px; }
+.line { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.line img { width: 64px; height: 80px; object-fit: cover; border-radius: 8px; }
+.line .t { font-weight: 600; font-size: 14px; }
+.qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; margin-top: 6px; }
+.qty button { background: none; border: 0; width: 28px; height: 28px; cursor: pointer; font-size: 16px; }
+.qty span { min-width: 22px; text-align: center; font-size: 14px; }
+.empty { text-align: center; color: var(--muted); padding: 40px 10px; }
+.totals { display: flex; justify-content: space-between; font-size: 15px; }
+.totals.big { font-family: var(--display); font-size: 26px; }
+.checkout { display: grid; gap: 10px; }
+.checkout .lbl { font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 4px; }
+
+/* Pago */
+.payopts { display: grid; gap: 8px; }
+.payopt { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; text-align: left; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+.payopt[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.payopt b { font-size: 15px; }
+.payopt small { grid-column: 1; color: var(--muted); font-size: 13px; }
+.payopt .num { grid-column: 2; grid-row: 1 / 3; align-self: center; font-weight: 700; }
+.prov { display: grid; gap: 8px; }
+.prov > span { font-size: 13px; font-weight: 600; color: var(--muted); }
+
+/* Contacto */
+.contact { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.contact h3 { font-family: var(--body); font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.contact p, .contact table { margin: 0; font-size: 15px; color: var(--muted); }
+.contact table { border-collapse: collapse; width: 100%; }
+.contact td { padding: 3px 0; }
+.contact td + td { text-align: right; }
+@media (max-width: 720px) { .contact { grid-template-columns: 1fr; } }
+footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size: 13px; color: var(--muted); }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 999px; font-size: 14px; z-index: 60; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#inicio">Beaty<span>Nails</span></a>
+    <nav class="nav" aria-label="Principal">
+      <a href="#servicios">Servicios</a>
+      <a href="#reservar">Reservar</a>
+      <a href="#tienda">Tienda</a>
+      <a href="#contacto">Contacto</a>
+    </nav>
+    <button class="cart-btn" id="cartOpen" type="button" aria-label="Abrir carrito">Carrito <b id="cartCount" class="num">0</b></button>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="inicio">
+    <div class="wrap">
+      <div>
+        <div class="eyebrow">Salón de uñas · Manicura y pedicura</div>
+        <h1>Uñas que duran, <em>color que brilla.</em></h1>
+        <p>Gel, acrílico, diseño a mano y spa de pies con técnicas certificadas. Elige tu servicio, aparta tu hora en línea y llévate a casa los productos que usamos en cabina.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#reservar">Reservar cita</a>
+          <a class="btn btn-ghost" href="#tienda">Ver tienda</a>
+        </div>
+        <div class="facts">
+          <div><strong class="num">21 días</strong>de duración en gel</div>
+          <div><strong class="num">+60</strong>tonos en cabina</div>
+          <div><strong>Lun a Sáb</strong>10:00 a 20:00</div>
+        </div>
+      </div>
+      <div class="swatches" aria-hidden="true" id="heroArt"></div>
+    </div>
+  </section>
+
+  <section class="block" id="servicios">
+    <div class="wrap">
+      <div class="head">
+        <div><div class="eyebrow">Carta de servicios</div><h2>Servicios y precios</h2></div>
+        <p>Precios en pesos (MXN). El tiempo indicado es lo que dura tu cita en cabina.</p>
+      </div>
+      <div class="menu" id="menu"></div>
+    </div>
+  </section>
+
+  <section class="block" id="reservar">
+    <div class="wrap">
+      <div class="head">
+        <div><div class="eyebrow">Agenda en línea</div><h2>Reserva tu cita</h2></div>
+        <p>Los horarios ocupados aparecen tachados. Te confirmamos por WhatsApp un día antes.</p>
+      </div>
+      <form class="booking" id="bookForm" novalidate>
+        <div class="panel">
+          <div class="step">
+            <div class="step-title"><i>1</i>Servicio</div>
+            <select id="bkService" aria-label="Servicio"></select>
+          </div>
+          <div class="step">
+            <div class="step-title"><i>2</i>Manicurista</div>
+            <div class="chips" id="bkStaff" role="group" aria-label="Manicurista"></div>
+          </div>
+          <div class="step">
+            <div class="step-title"><i>3</i>Día y hora</div>
+            <label class="f" for="bkDate">Día<input type="date" id="bkDate"></label>
+            <div class="slots" id="bkSlots" role="group" aria-label="Hora"></div>
+            <p class="note" id="bkSlotNote"></p>
+          </div>
+          <div class="step">
+            <div class="step-title"><i>4</i>Tus datos</div>
+            <div class="grid2">
+              <label class="f" for="bkName">Nombre<input id="bkName" autocomplete="name" placeholder="Ana López"></label>
+              <label class="f" for="bkPhone">WhatsApp<input id="bkPhone" type="tel" autocomplete="tel" placeholder="55 1234 5678"></label>
+            </div>
+            <label class="f" for="bkNotes">Notas (opcional)<textarea id="bkNotes" rows="2" placeholder="Ej. quiero retirar gel anterior, diseño de flores…"></textarea></label>
+          </div>
+          <div class="step" id="bkPayStep">
+            <div class="step-title"><i>5</i>Pago</div>
+            <div class="payopts" id="bkPay" role="radiogroup" aria-label="Forma de pago"></div>
+            <div class="prov" id="bkProv"></div>
+          </div>
+        </div>
+        <aside class="panel summary">
+          <div class="eyebrow">Resumen</div>
+          <dl id="bkSummary"></dl>
+          <div class="total"><span id="bkTotalLbl">Total</span><span class="num" id="bkTotal">$0</span></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:16px" type="submit" id="bkSubmit">Confirmar reserva</button>
+          <p class="note" id="bkPayNote">Pagas en el salón. Puedes cancelar sin costo hasta 4 horas antes.</p>
+          <div id="bkMsg"></div>
+          <div class="mine" id="myBookings"></div>
+        </aside>
+      </form>
+    </div>
+  </section>
+
+  <section class="block" id="tienda">
+    <div class="wrap">
+      <div class="head">
+        <div><div class="eyebrow">Tienda en línea</div><h2>Productos para tus uñas</h2></div>
+        <p>Los mismos productos que usamos en cabina. Recoge en el salón sin costo o pide envío a domicilio.</p>
+      </div>
+      <div class="chips filters" id="filters" role="group" aria-label="Categoría"></div>
+      <div class="products" id="products"></div>
+    </div>
+  </section>
+
+  <section class="block" id="contacto">
+    <div class="wrap">
+      <div class="head"><div><div class="eyebrow">Visítanos</div><h2>Contacto y horario</h2></div></div>
+      <div class="contact">
+        <div>
+          <h3>Dirección</h3>
+          <p>Av. Siempre Viva 123, Local 4<br>Col. Centro, Ciudad de México</p>
+        </div>
+        <div>
+          <h3>Horario</h3>
+          <table class="num"><tbody id="hoursTable"></tbody></table>
+        </div>
+        <div>
+          <h3>WhatsApp y redes</h3>
+          <p class="num">55 0000 0000<br>@beatynails</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site"><div class="wrap">© <span id="yr"></span> BeatyNails. Dirección, teléfono y fotos de ejemplo: cámbialos por los del salón. · <a href="admin.html">Panel del salón</a> · <a href="descargas/beatynails-panel.apk" download id="apkFoot">App del salón para Android</a></div></footer>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Carrito">
+  <header><h2>Tu carrito</h2><button class="x" type="button" id="cartClose" aria-label="Cerrar">×</button></header>
+  <div class="lines" id="lines"></div>
+  <footer id="cartFoot"></footer>
+</aside>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="datos.js?v=20261009d"></script>
+<script src="pagos.js?v=20261009d"></script>
+<script>
+(function () {
+  // Datos y utilidades compartidos con el panel: datos.js
+  BN.seed();
+  var SERVICES = BN.services(), STAFF = ["Cualquiera"].concat(BN.staff()), OPEN = BN.hours(), SET = BN.settings();
+  var STEP = SET.step, SHIPPING = SET.shipping, FREE_FROM = SET.freeFrom;
+  var PAY = SET.pagos, ONLINE = Pagos.ready(), PROVS = Pagos.providers();
+  var PRODUCTS = BN.products().filter(function (p) { return p.active !== false; });
+  var load = BN.load, save = BN.save, esc = BN.esc, money = BN.money, ymd = BN.ymd, hm = BN.hm, parseDate = BN.parseDate, niceDate = BN.niceDate;
+  var $ = function (s) { return document.querySelector(s); };
+  var toastTimer;
+  function toast(t) { var el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, 2600); }
+
+  // Horario en la sección de contacto
+  (function () {
+    var order = [1, 2, 3, 4, 5, 6, 0], names = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    $("#hoursTable").innerHTML = order.map(function (d) { var h = OPEN[d]; return "<tr><td>" + names[d] + "</td><td>" + (h ? hm(h[0]) + " a " + hm(h[1]) : "Cerrado") + "</td></tr>"; }).join("");
+  })();
+
+  // Portada: muestrario de colores en uñas
+  (function hero() {
+    var colors = ["#8c1d40", "#e7b5a8", "#b9a3e3", "#b0123a", "#f3eef0", "#2a1520", "#e6b34a", "#9fc7d9", "#d77a9a"];
+    var g = "";
+    colors.forEach(function (c, i) {
+      var x = 70 + (i % 3) * 130, y = 60 + Math.floor(i / 3) * 130;
+      g += '<g transform="translate(' + x + ' ' + y + ') rotate(' + ((i % 2 ? 1 : -1) * (6 + i)) + ')"><path d="M-34 40 v-40 q0 -40 34 -40 q34 0 34 40 v40z" fill="' + c + '"/><path d="M-22 30 v-30 q0 -24 12 -30" stroke="#fff" stroke-opacity=".5" stroke-width="7" fill="none" stroke-linecap="round"/></g>';
+    });
+    $("#heroArt").innerHTML = '<svg viewBox="0 0 400 400" role="img" aria-label="Muestrario de tonos">' + g + '</svg>';
+  })();
+
+  // ---------- Servicios ----------
+  $("#menu").innerHTML = SERVICES.map(function (s) {
+    return '<div class="svc"><h3>' + esc(s.name) + '</h3><div class="price num">' + money(s.price) + '</div><p>' + esc(s.desc) + ' <span class="dur num">· ' + s.min + ' min</span></p><button type="button" data-book="' + s.id + '">Reservar este servicio →</button></div>';
+  }).join("");
+  $("#menu").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-book]"); if (!b) return;
+    $("#bkService").value = b.dataset.book; renderBooking();
+    $("#reservar").scrollIntoView();
+  });
+
+  // ---------- Reservas ----------
+  var bookings = BN.bookings();
+  var state = { staff: "Cualquiera", time: null, pay: null, prov: PROVS.length ? PROVS[0].id : null };
+  var svcSel = $("#bkService");
+  svcSel.innerHTML = SERVICES.map(function (s) { return '<option value="' + s.id + '">' + esc(s.name) + ' · ' + money(s.price) + ' · ' + s.min + ' min</option>'; }).join("");
+
+  function nextOpenDay(d) { d = new Date(d); for (var i = 0; i < 8 && !OPEN[d.getDay()]; i++) d.setDate(d.getDate() + 1); return d; }
+  var today = new Date();
+  var dateIn = $("#bkDate");
+  dateIn.min = ymd(today);
+  var maxD = new Date(); maxD.setDate(maxD.getDate() + 60); dateIn.max = ymd(maxD);
+  // Si ya pasó la hora de cierre, el primer día disponible es mañana
+  var firstDay = new Date(today);
+  if (OPEN[firstDay.getDay()] && today.getHours() * 60 + today.getMinutes() + 60 >= OPEN[firstDay.getDay()][1]) firstDay.setDate(firstDay.getDate() + 1);
+  firstDay = nextOpenDay(firstDay);
+  dateIn.value = ymd(firstDay);
+
+  function svc() { return SERVICES.find(function (s) { return s.id === svcSel.value; }); }
+
+  // Formas de pago que el salón activó en el panel (Pagos)
+  function payModes(price) {
+    var c = PAY.citas, m = [], dep = Math.round(price * PAY.pct / 100);
+    if (ONLINE && c.completo) m.push({ id: "completo", t: "Pagar completo en línea", d: "Tu cita queda pagada.", now: price });
+    if (ONLINE && c.anticipo && dep > 0 && dep < price) m.push({ id: "anticipo", t: "Anticipo del " + PAY.pct + "%", d: "El resto (" + money(price - dep) + ") lo pagas en el salón.", now: dep });
+    if (c.sucursal || !m.length) m.push({ id: "sucursal", t: "Pagar en el salón", d: "Pagas el día de tu cita.", now: 0 });
+    return m;
+  }
+  function curMode(price) { var m = payModes(price); return m.find(function (x) { return x.id === state.pay; }) || m[0]; }
+  function provName(id) { return Pagos.NAMES[id] || id; }
+  function provChips(sel, attr) {
+    return '<span>Pagar con</span><div class="chips" role="group" aria-label="Pagar con">' + PROVS.map(function (p) { return '<button type="button" class="chip" ' + attr + '="' + p.id + '" aria-pressed="' + (p.id === sel) + '">' + p.name + '</button>'; }).join("") + '</div>';
+  }
+
+  function busy(staff, date, start, len) { return BN.busy(bookings, staff, date, start, len); }
+  // Para "Cualquiera": la primera manicurista libre en ese horario
+  function freeStaff(date, start, len) {
+    if (state.staff !== "Cualquiera") return busy(state.staff, date, start, len) ? null : state.staff;
+    for (var i = 1; i < STAFF.length; i++) if (!busy(STAFF[i], date, start, len)) return STAFF[i];
+    return null;
+  }
+
+  function renderBooking() {
+    $("#bkStaff").innerHTML = STAFF.map(function (n) { return '<button type="button" class="chip" aria-pressed="' + (n === state.staff) + '" data-staff="' + esc(n) + '">' + esc(n) + '</button>'; }).join("");
+    var s = svc(), date = dateIn.value, d = date ? parseDate(date) : null, hours = d ? OPEN[d.getDay()] : null;
+    var html = "", note = "";
+    if (!date) note = "Elige un día.";
+    else if (!hours) note = "Ese día el salón está cerrado. Elige otro día.";
+    else {
+      var now = new Date(), isToday = date === ymd(now), nowMin = now.getHours() * 60 + now.getMinutes();
+      var count = 0;
+      for (var m = hours[0]; m + s.min <= hours[1]; m += STEP) {
+        var past = isToday && m <= nowMin + 30;
+        var ok = !past && freeStaff(date, m, s.min);
+        if (ok) count++;
+        html += '<button type="button" class="chip num" data-time="' + m + '" aria-pressed="' + (state.time === m) + '"' + (ok ? "" : " disabled") + '>' + hm(m) + '</button>';
+      }
+      if (state.time != null && !(state.time >= hours[0] && state.time + s.min <= hours[1] && freeStaff(date, state.time, s.min))) state.time = null;
+      note = count ? "Duración del servicio: " + s.min + " min." : "No quedan horarios libres este día. Prueba otro día u otra manicurista.";
+    }
+    $("#bkSlots").innerHTML = html;
+    $("#bkSlotNote").textContent = note;
+
+    var who = state.time != null ? freeStaff(date, state.time, s.min) : null;
+    $("#bkSummary").innerHTML =
+      "<dt>Servicio</dt><dd>" + esc(s.name) + "</dd>" +
+      "<dt>Manicurista</dt><dd>" + esc(who || state.staff) + "</dd>" +
+      "<dt>Día</dt><dd>" + (date && hours ? esc(niceDate(date)) : "—") + "</dd>" +
+      '<dt>Hora</dt><dd class="num">' + (state.time != null ? hm(state.time) + " a " + hm(state.time + s.min) : "—") + "</dd>";
+    var modes = payModes(s.price), mode = curMode(s.price);
+    $("#bkPayStep").hidden = modes.length === 1 && mode.id === "sucursal";
+    $("#bkPay").innerHTML = modes.map(function (m) {
+      return '<button type="button" class="payopt" role="radio" aria-checked="' + (m.id === mode.id) + '" data-pay="' + m.id + '"><b>' + esc(m.t) + '</b><small>' + esc(m.d) + '</small><span class="num">' + (m.now ? money(m.now) : money(s.price)) + '</span></button>';
+    }).join("");
+    $("#bkProv").innerHTML = mode.now ? provChips(state.prov, "data-prov") : "";
+    if (mode.now) {
+      $("#bkSummary").innerHTML += "<dt>Pago</dt><dd>" + esc(mode.id === "anticipo" ? "Anticipo " + PAY.pct + "%" : "Completo") + " · " + provName(state.prov) + "</dd>" +
+        (mode.now < s.price ? '<dt>En el salón</dt><dd class="num">' + money(s.price - mode.now) + '</dd>' : "");
+    }
+    $("#bkTotalLbl").textContent = mode.now ? "A pagar hoy" : "Total";
+    $("#bkTotal").textContent = money(mode.now || s.price);
+    $("#bkSubmit").textContent = mode.now ? "Pagar " + money(mode.now) + " y reservar" : "Confirmar reserva";
+    $("#bkPayNote").textContent = mode.now ? "Pagas de forma segura en " + provName(state.prov) + "; aquí no se guardan datos de tu tarjeta." : "Pagas en el salón. Puedes cancelar sin costo hasta 4 horas antes.";
+    renderMine();
+  }
+
+  function renderMine() {
+    var nowKey = ymd(new Date());
+    var mine = bookings.filter(function (b) { return b.mine && b.status !== "cancelada" && b.date >= nowKey; }).sort(function (a, b) { return (a.date + hm(a.start)).localeCompare(b.date + hm(b.start)); });
+    $("#myBookings").innerHTML = mine.length ? "<h3>Mis próximas citas</h3><ul>" + mine.map(function (b) {
+      var s = SERVICES.find(function (x) { return x.id === b.service; }) || { name: b.service };
+      return '<li><span><b>' + esc(niceDate(b.date)) + ' · <span class="num">' + hm(b.start) + '</span></b><br><span class="muted">' + esc(s.name) + ' con ' + esc(b.staff) + '</span>' + (b.codigo && !b.llego ? '<br><span class="mycode">Código para el salón: <b class="num">' + esc(b.codigo) + '</b></span>' : "") + '</span><button type="button" class="linkbtn" data-cancel="' + b.id + '">Cancelar</button></li>';
+    }).join("") + "</ul>" : "";
+  }
+
+  svcSel.addEventListener("change", renderBooking);
+  dateIn.addEventListener("change", function () { state.time = null; renderBooking(); });
+  $("#bkStaff").addEventListener("click", function (e) { var b = e.target.closest("[data-staff]"); if (!b) return; state.staff = b.dataset.staff; renderBooking(); });
+  $("#bkSlots").addEventListener("click", function (e) { var b = e.target.closest("[data-time]"); if (!b || b.disabled) return; state.time = +b.dataset.time; renderBooking(); });
+  $("#bkPay").addEventListener("click", function (e) { var b = e.target.closest("[data-pay]"); if (!b) return; state.pay = b.dataset.pay; renderBooking(); });
+  $("#bkProv").addEventListener("click", function (e) { var b = e.target.closest("[data-prov]"); if (!b) return; state.prov = b.dataset.prov; renderBooking(); });
+  $("#myBookings").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-cancel]"); if (!b) return;
+    bookings = BN.bookings(); bookings.forEach(function (x) { if (x.id === b.dataset.cancel) x.status = "cancelada"; }); save("bn_bookings", bookings);
+    $("#bkMsg").innerHTML = ""; renderBooking(); toast("Cita cancelada");
+  });
+
+  $("#bookForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var s = svc(), name = $("#bkName").value.trim(), phone = $("#bkPhone").value.replace(/\D/g, ""), msg = $("#bkMsg");
+    var err = state.time == null ? "Elige una hora disponible." : !name ? "Escribe tu nombre." : phone.length < 10 ? "Escribe tu WhatsApp a 10 dígitos." : "";
+    if (err) { msg.innerHTML = '<div class="msg">' + err + '</div>'; return; }
+    bookings = BN.bookings();
+    var who = freeStaff(dateIn.value, state.time, s.min);
+    if (!who) { msg.innerHTML = '<div class="msg">Ese horario se acaba de ocupar. Elige otro.</div>'; renderBooking(); return; }
+    var mode = curMode(s.price);
+    var b = { id: "b" + Date.now(), service: s.id, serviceName: s.name, price: s.price, status: "confirmada", source: "web", staff: who, date: dateIn.value, start: state.time, min: s.min, name: name, phone: phone, notes: $("#bkNotes").value.trim(), mine: true, created: BN.stamp(),
+      payment: mode.now ? { mode: mode.id, provider: state.prov, status: "pendiente", due: mode.now, paid: 0 } : { mode: "sucursal" } };
+    if (!save("bn_bookings", bookings.concat([b]))) { msg.innerHTML = '<div class="msg">No se pudo guardar la cita. Intenta de nuevo.</div>'; return; }
+    bookings.push(b);
+    state.time = null; $("#bkNotes").value = "";
+    if (mode.now) { msg.innerHTML = ""; renderBooking(); payBooking(b); return; }
+    msg.innerHTML = '<div class="msg ok"><b>¡Listo, ' + esc(name.split(" ")[0]) + '!</b> Tu cita de ' + esc(s.name.toLowerCase()) + ' quedó apartada el ' + esc(niceDate(b.date)) + ' a las ' + hm(b.start) + ' con ' + esc(who) + '.</div>';
+    renderBooking();
+  });
+
+  // ---------- Cobro en línea ----------
+  function bookingItems(b) {
+    return [{ nombre: b.serviceName + (b.payment.mode === "anticipo" ? " · anticipo " + Math.round(b.payment.due / b.price * 100) + "%" : ""), cantidad: 1, precio: b.payment.due }];
+  }
+  function orderItems(o) {
+    var it = o.items.map(function (i) { return { nombre: i.name, cantidad: i.q, precio: i.price }; });
+    if (o.shipping) it.push({ nombre: "Envío a domicilio", cantidad: 1, precio: o.shipping });
+    return it;
+  }
+  function payError(err, retry) {
+    Pagos.modal({ title: "No se pudo iniciar el pago", html: "<p>" + esc(err.message || err) + "</p>", buttons: [{ label: "Intentar de nuevo", primary: true, onClick: retry }, { label: "Cerrar" }] });
+  }
+  function payBooking(b) {
+    var btn = $("#bkSubmit"); btn.disabled = true;
+    Pagos.start({ prov: b.payment.provider, ref: b.id, items: bookingItems(b), name: b.name, desc: b.serviceName + " · " + niceDate(b.date) + " · " + hm(b.start) })
+      .then(function (res) { btn.disabled = false; finishPay(b.id, res); })
+      .catch(function (err) { btn.disabled = false; payError(err, function () { payBooking(b); }); });
+  }
+  function payOrder(o) {
+    Pagos.start({ prov: o.payment.provider, ref: o.id, items: orderItems(o), name: o.name, desc: "Pedido " + o.id })
+      .then(function (res) { finishPay(o.id, res); })
+      .catch(function (err) { payError(err, function () { payOrder(o); }); });
+  }
+  function setPayLater(kind, id) {
+    var key = kind === "b" ? "bn_bookings" : "bn_orders", arr = kind === "b" ? BN.bookings() : BN.orders();
+    arr.forEach(function (x) { if (x.id === id) x.payment = { mode: "sucursal" }; });
+    save(key, arr); bookings = BN.bookings();
+  }
+  function cancelUnpaid(kind, id) {
+    if (kind === "b") { bookings = BN.bookings(); bookings.forEach(function (x) { if (x.id === id) x.status = "cancelada"; }); save("bn_bookings", bookings); return; }
+    var orders = BN.orders(), o = orders.find(function (x) { return x.id === id; }); if (!o || o.status === "cancelado") return;
+    o.status = "cancelado"; save("bn_orders", orders);
+    var all = BN.products();
+    o.items.forEach(function (i) { all.forEach(function (p) { if (p.id === i.id && p.stock != null && p.stock !== "") p.stock = +p.stock + i.q; }); });
+    save("bn_products", all); refreshProducts();
+    if (ordered && ordered.id === id) { ordered = null; renderCart(); }
+  }
+  // Recuadro con el código para el salón (no depende de que el navegador tenga pagos.js al día)
+  function codeBox(code, why) {
+    if (Pagos.codeHtml) return Pagos.codeHtml(code, why);
+    return '<div style="background:var(--blush);border-radius:14px;padding:14px;text-align:center;display:grid;gap:4px"><small style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--lacquer)">Tu código para el salón</small><b class="num" style="font:700 44px/1.1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.3em;padding-left:.3em">' + esc(code || "") + '</b><span style="font-size:14px;color:var(--muted)">' + esc(why) + '</span></div>';
+  }
+  /** Muestra el resultado del cobro y deja la cita o el pedido al día. */
+  function finishPay(ref, res) {
+    var r = Pagos.apply(ref, res);
+    bookings = BN.bookings(); renderBooking(); renderCart();
+    if (!r) { Pagos.modal({ title: "No encontramos ese cobro", html: "<p>Si ya pagaste, escríbenos por WhatsApp con tu comprobante.</p>", buttons: [{ label: "Cerrar", primary: true }] }); return; }
+    var x = r.rec, p = x.payment, isB = r.kind === "b";
+    if (p.status === "pagado") {
+      var rest = isB ? x.price - p.paid : 0;
+      var why = isB ? "Dalo al llegar al salón para confirmar tu asistencia." : x.delivery === "recoger" ? "Dalo en el salón para recoger tu pedido." : "Tenlo a la mano cuando recibas tu pedido.";
+      Pagos.modal({
+        title: isB ? (rest > 0 ? "¡Anticipo recibido!" : "¡Cita pagada!") : "¡Pago recibido!",
+        html: isB ? "<p>Tu cita de " + esc(x.serviceName.toLowerCase()) + " quedó confirmada el " + esc(niceDate(x.date)) + " a las " + hm(x.start) + " con " + esc(x.staff) + ".</p><p>Pagaste <b class=\"num\">" + money(p.paid) + "</b> con " + provName(p.provider) + "." + (rest > 0 ? " Te quedan <b class=\"num\">" + money(rest) + "</b> para pagar en el salón." : "") + "</p>" + codeBox(x.codigo, why)
+          : "<p>Pedido <b class=\"num\">" + esc(x.id) + "</b> pagado: <b class=\"num\">" + money(p.paid) + "</b> con " + provName(p.provider) + ".</p><p>" + (x.delivery === "recoger" ? "Te avisamos por WhatsApp cuando esté listo para recoger." : "Te escribimos por WhatsApp para coordinar el envío.") + "</p>" + codeBox(x.codigo, why),
+        buttons: [{ label: "Listo", primary: true }]
+      });
+      if (isB) $("#bkMsg").innerHTML = '<div class="msg ok"><b>Cita pagada.</b> ' + esc(niceDate(x.date)) + ' a las ' + hm(x.start) + ' con ' + esc(x.staff) + '. Tu código para el salón es <b class="num">' + esc(x.codigo) + '</b>.</div>';
+      return;
+    }
+    var later = isB ? PAY.citas.sucursal : PAY.tienda.sucursal;
+    var btns = [{ label: "Intentar de nuevo", primary: true, onClick: function () { isB ? payBooking(x) : payOrder(x); } }];
+    if (later) btns.push({ label: isB ? "Pagar en el salón" : "Pagar al recoger o recibir", onClick: function () { setPayLater(r.kind, x.id); toast(isB ? "Listo: pagas el día de tu cita" : "Listo: pagas al recoger o recibir"); } });
+    btns.push({ label: isB ? "Cancelar la cita" : "Cancelar el pedido", onClick: function () { cancelUnpaid(r.kind, x.id); renderBooking(); toast(isB ? "Cita cancelada" : "Pedido cancelado"); } });
+    Pagos.modal({ title: "El pago no se completó", html: "<p>" + (isB ? "Tu horario sigue apartado." : "Tu pedido " + esc(x.id) + " sigue apartado.") + " Puedes intentar de nuevo" + (later ? (isB ? " o pagar en el salón." : " o pagar al recoger o recibir.") : ".") + "</p>", buttons: btns });
+  }
+
+  // ---------- Tienda ----------
+  var cart = load("bn_cart", {});
+  var cat = "Todo";
+  var CATS = ["Todo"].concat(PRODUCTS.map(function (p) { return p.cat; }).filter(function (c, i, a) { return a.indexOf(c) === i; }));
+  PRODUCTS.forEach(function (p) { p.img = BN.productImg(p); });
+
+  function soldOut(p) { return p.stock != null && p.stock !== "" && +p.stock <= 0; }
+  function maxQty(p) { return p.stock != null && p.stock !== "" ? +p.stock : 99; }
+  function renderShop() {
+    $("#filters").innerHTML = CATS.map(function (c) { return '<button type="button" class="chip" data-cat="' + c + '" aria-pressed="' + (c === cat) + '">' + c + '</button>'; }).join("");
+    $("#products").innerHTML = PRODUCTS.filter(function (p) { return cat === "Todo" || p.cat === cat; }).map(function (p) {
+      return '<article class="prod"><div class="ph"><img src="' + p.img + '" alt="' + esc(p.name) + '" loading="lazy">' + (p.tag ? '<span class="tag">' + esc(p.tag) + '</span>' : "") + '</div>' +
+        '<div class="info"><h3>' + esc(p.name) + '</h3><p>' + esc(p.desc) + '</p><div class="row"><span class="price num">' + money(p.price) + '</span>' + (soldOut(p) ? '<span class="muted" style="font-size:14px">Agotado</span>' : '<button type="button" class="add" data-add="' + p.id + '">Agregar</button>') + '</div></div></article>';
+    }).join("");
+  }
+  $("#filters").addEventListener("click", function (e) { var b = e.target.closest("[data-cat]"); if (!b) return; cat = b.dataset.cat; renderShop(); });
+  $("#products").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-add]"); if (!b) return;
+    var p = PRODUCTS.find(function (x) { return x.id === b.dataset.add; });
+    if ((cart[p.id] || 0) >= maxQty(p)) { toast("No hay más piezas de este producto"); return; }
+    cart[b.dataset.add] = (cart[b.dataset.add] || 0) + 1; save("bn_cart", cart); renderCart();
+    toast("Agregado al carrito");
+  });
+
+  var delivery = "recoger", ordered = null;
+  var shopModes = (function () { var m = []; if (ONLINE && PAY.tienda.linea) m.push("linea"); if (PAY.tienda.sucursal || !m.length) m.push("sucursal"); return m; })();
+  var shopPay = shopModes[0], shopProv = state.prov;
+  function refreshProducts() { PRODUCTS = BN.products().filter(function (p) { return p.active !== false; }); PRODUCTS.forEach(function (p) { p.img = BN.productImg(p); }); renderShop(); }
+  function cartItems() { return Object.keys(cart).map(function (id) { var p = PRODUCTS.find(function (x) { return x.id === id; }); return p && cart[id] > 0 ? { p: p, q: cart[id] } : null; }).filter(Boolean); }
+  function renderCart() {
+    var items = cartItems(), n = items.reduce(function (a, i) { return a + i.q; }, 0);
+    $("#cartCount").textContent = n;
+    if (ordered) {
+      var cur = BN.orders().find(function (o) { return o.id === ordered.id; }) || ordered, op = cur.payment || {}, paid = op.status === "pagado";
+      $("#lines").innerHTML = '<div class="empty"><h2 style="color:var(--ink);margin-bottom:10px">¡Gracias por tu compra!</h2><p>Pedido <b class="num">' + ordered.id + '</b> por <b class="num">' + money(ordered.total) + '</b>' + (paid ? ", pagado con " + provName(op.provider) : "") + '.<br>' +
+        (ordered.delivery === "recoger" ? "Te avisamos por WhatsApp cuando esté listo para recoger en el salón." : paid ? "Te escribimos por WhatsApp para coordinar el envío." : "Te escribimos por WhatsApp para coordinar el pago y el envío.") + '</p>' + (paid && cur.codigo ? '<div style="margin-top:14px;text-align:left">' + codeBox(cur.codigo, cur.delivery === "recoger" ? "Dalo en el salón para recoger tu pedido." : "Tenlo a la mano cuando recibas tu pedido.") + '</div>' : "") + '</div>';
+      $("#cartFoot").innerHTML = '<button class="btn btn-primary" type="button" id="keepShopping">Seguir comprando</button>';
+      return;
+    }
+    if (!items.length) {
+      $("#lines").innerHTML = '<div class="empty">Tu carrito está vacío.<br>Agrega esmaltes, aceites o kits desde la tienda.</div>';
+      $("#cartFoot").innerHTML = ""; return;
+    }
+    $("#lines").innerHTML = items.map(function (i) {
+      return '<div class="line"><img src="' + i.p.img + '" alt=""><div><div class="t">' + esc(i.p.name) + '</div><div class="muted num" style="font-size:13px">' + money(i.p.price) + ' c/u</div>' +
+        '<div class="qty"><button type="button" data-dec="' + i.p.id + '" aria-label="Quitar uno">−</button><span class="num">' + i.q + '</span><button type="button" data-inc="' + i.p.id + '" aria-label="Agregar uno">+</button></div></div>' +
+        '<div class="num" style="font-weight:600">' + money(i.p.price * i.q) + '</div></div>';
+    }).join("");
+    var sub = items.reduce(function (a, i) { return a + i.p.price * i.q; }, 0);
+    var ship = delivery === "envio" && sub < FREE_FROM ? SHIPPING : 0;
+    // Al cambiar entrega o pago se redibuja el formulario: conserva lo ya escrito
+    var keep = ["coName", "coPhone", "coAddr"].map(function (id) { var el = document.getElementById(id); return el ? el.value : ""; });
+    $("#cartFoot").innerHTML =
+      '<div class="totals"><span>Subtotal</span><span class="num">' + money(sub) + '</span></div>' +
+      '<div class="totals"><span>' + (delivery === "envio" ? "Envío" + (ship ? "" : " (gratis desde " + money(FREE_FROM) + ")") : "Recoger en el salón") + '</span><span class="num">' + (ship ? money(ship) : "Gratis") + '</span></div>' +
+      '<div class="totals big"><span>Total</span><span class="num">' + money(sub + ship) + '</span></div>' +
+      '<form class="checkout" id="checkout" novalidate>' +
+      '<div class="chips" role="group" aria-label="Entrega"><button type="button" class="chip" data-del="recoger" aria-pressed="' + (delivery === "recoger") + '">Recoger en el salón</button><button type="button" class="chip" data-del="envio" aria-pressed="' + (delivery === "envio") + '">Envío a domicilio</button></div>' +
+      '<input id="coName" placeholder="Nombre" autocomplete="name" aria-label="Nombre">' +
+      '<input id="coPhone" type="tel" placeholder="WhatsApp (10 dígitos)" autocomplete="tel" aria-label="WhatsApp">' +
+      (delivery === "envio" ? '<input id="coAddr" placeholder="Dirección de entrega" autocomplete="street-address" aria-label="Dirección">' : "") +
+      (shopModes.length > 1 || shopPay === "linea" ? '<div class="lbl">Pago</div><div class="chips" role="group" aria-label="Pago">' + shopModes.map(function (m) { return '<button type="button" class="chip" data-spay="' + m + '" aria-pressed="' + (m === shopPay) + '">' + (m === "linea" ? "Pagar en línea" : delivery === "envio" ? "Pagar al recibir" : "Pagar al recoger") + '</button>'; }).join("") + '</div>' : "") +
+      (shopPay === "linea" ? '<div class="prov">' + provChips(shopProv, "data-sprov") + '</div>' : "") +
+      '<div id="coMsg"></div><button class="btn btn-primary" type="submit">' + (shopPay === "linea" ? "Pagar" : "Hacer pedido") + ' · <span class="num">' + money(sub + ship) + '</span></button></form>';
+    ["coName", "coPhone", "coAddr"].forEach(function (id, i) { var el = document.getElementById(id); if (el && keep[i]) el.value = keep[i]; });
+  }
+  $("#lines").addEventListener("click", function (e) {
+    var inc = e.target.closest("[data-inc]"), dec = e.target.closest("[data-dec]");
+    if (inc) { var p = PRODUCTS.find(function (x) { return x.id === inc.dataset.inc; }); if (cart[p.id] >= maxQty(p)) { toast("No hay más piezas de este producto"); return; } cart[inc.dataset.inc]++; }
+    else if (dec) { cart[dec.dataset.dec]--; if (cart[dec.dataset.dec] <= 0) delete cart[dec.dataset.dec]; }
+    else return;
+    save("bn_cart", cart); renderCart();
+  });
+  $("#cartFoot").addEventListener("click", function (e) {
+    var d = e.target.closest("[data-del]");
+    if (d) { delivery = d.dataset.del; renderCart(); }
+    var sp = e.target.closest("[data-spay]"); if (sp) { shopPay = sp.dataset.spay; renderCart(); }
+    var pv = e.target.closest("[data-sprov]"); if (pv) { shopProv = pv.dataset.sprov; renderCart(); }
+    if (e.target.closest("#keepShopping")) { ordered = null; closeCart(); renderCart(); }
+  });
+  $("#cartFoot").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("#coName").value.trim(), phone = $("#coPhone").value.replace(/\D/g, ""), addr = $("#coAddr") ? $("#coAddr").value.trim() : "";
+    var err = !name ? "Escribe tu nombre." : phone.length < 10 ? "Escribe tu WhatsApp a 10 dígitos." : delivery === "envio" && !addr ? "Escribe la dirección de entrega." : "";
+    if (err) { $("#coMsg").innerHTML = '<div class="msg" style="margin:0">' + err + '</div>'; return; }
+    var items = cartItems(), sub = items.reduce(function (a, i) { return a + i.p.price * i.q; }, 0);
+    var ship = delivery === "envio" && sub < FREE_FROM ? SHIPPING : 0;
+    var orders = BN.orders(), real = orders.filter(function (o) { return !o.demo; }).length;
+    ordered = { id: "BN-" + String(1001 + real), subtotal: sub, shipping: ship, total: sub + ship, delivery: delivery, name: name, phone: phone, address: addr, status: "nuevo", items: items.map(function (i) { return { id: i.p.id, name: i.p.name, q: i.q, price: i.p.price }; }), created: BN.stamp(),
+      payment: shopPay === "linea" ? { mode: "linea", provider: shopProv, status: "pendiente", due: sub + ship, paid: 0 } : { mode: "sucursal" } };
+    if (!save("bn_orders", orders.concat([ordered]))) { ordered = null; $("#coMsg").innerHTML = '<div class="msg" style="margin:0">No se pudo guardar el pedido. Intenta de nuevo.</div>'; return; }
+    // Descuenta inventario
+    var all = BN.products();
+    items.forEach(function (i) { all.forEach(function (p) { if (p.id === i.p.id && p.stock != null && p.stock !== "") p.stock = Math.max(0, +p.stock - i.q); }); });
+    save("bn_products", all); refreshProducts();
+    cart = {}; save("bn_cart", cart); renderCart();
+    if (ordered.payment.mode === "linea") payOrder(ordered);
+  });
+
+  function openCart() { $("#drawer").hidden = false; $("#scrim").hidden = false; $("#cartClose").focus(); }
+  function closeCart() { $("#drawer").hidden = true; $("#scrim").hidden = true; }
+  $("#cartOpen").addEventListener("click", openCart);
+  $("#cartClose").addEventListener("click", closeCart);
+  $("#scrim").addEventListener("click", closeCart);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeCart(); });
+
+  $("#yr").textContent = new Date().getFullYear();
+  if (/BeatyNailsApp/.test(navigator.userAgent)) $("#apkFoot").hidden = true; // ya está en la app
+  renderBooking(); renderShop(); renderCart();
+
+  // Regreso desde Mercado Pago o Stripe: se confirma con el proveedor antes de marcar como pagado
+  var back = Pagos.readReturn();
+  if (back) {
+    if (back.pago === "cancelado" || !back.id) finishPay(back.ref, { pagado: false });
+    else {
+      Pagos.modal({ title: "Confirmando tu pago…", html: "<p>Un momento, estamos revisando el pago con " + provName(back.prov) + ".</p>" });
+      Pagos.verify(back.prov, back.id, back.ref)
+        .then(function (r) { finishPay(back.ref, { pagado: !!r.pagado, monto: r.monto, id: back.id }); })
+        .catch(function (err) { Pagos.modal({ title: "No pudimos confirmar el pago", html: "<p>" + esc(err.message) + "</p><p>Si se te hizo el cargo, escríbenos por WhatsApp con tu comprobante.</p>", buttons: [{ label: "Cerrar", primary: true }] }); });
+    }
+  }
+})();
+</script>
+</body>
+</html>

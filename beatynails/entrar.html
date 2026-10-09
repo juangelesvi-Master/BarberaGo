@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Entrar · Panel BeatyNails</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Pantalla de entrada al panel: una tarjeta centrada con los mismos colores del panel. */
+:root {
+  --bg: #f7f2f4; --surface: #ffffff; --ink: #2a1520; --muted: #7a6470; --line: #ecdfe4;
+  --lacquer: #8c1d40; --lacquer-ink: #ffffff; --blush: #f6dbe3; --side: #2a1520;
+  --ok: #1e7a4c; --ok-bg: #e2f3ea; --bad: #b3261e; --bad-bg: #fbe3e1; --warn: #9a5b00; --warn-bg: #fbecd2;
+  --display: "Gloock", "Didot", "Bodoni 72", Georgia, serif;
+  --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #140b10; --surface: #1f131a; --ink: #f7e9ee; --muted: #b8a0ab; --line: #3a2530;
+    --lacquer: #e0577f; --lacquer-ink: #1a0b11; --blush: #3b1d29; --side: #0e070b;
+    --ok: #6fd3a0; --ok-bg: #173527; --bad: #f08a80; --bad-bg: #3d1a18; --warn: #f0b860; --warn-bg: #3a2a10;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #140b10; --surface: #1f131a; --ink: #f7e9ee; --muted: #b8a0ab; --line: #3a2530;
+  --lacquer: #e0577f; --lacquer-ink: #1a0b11; --blush: #3b1d29; --side: #0e070b;
+  --ok: #6fd3a0; --ok-bg: #173527; --bad: #f08a80; --bad-bg: #3d1a18; --warn: #f0b860; --warn-bg: #3a2a10;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { min-height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); display: grid; place-items: center; min-height: 100vh; padding: 24px 16px; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--lacquer); outline-offset: 2px; }
+h1 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 30px; line-height: 1.15; text-wrap: balance; }
+.wrap { width: min(400px, 100%); display: grid; gap: 22px; }
+.brand { text-align: center; font-family: var(--display); font-size: 30px; }
+.brand span { color: var(--lacquer); }
+.brand small { display: block; font-family: var(--body); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 26px; display: grid; gap: 16px; box-shadow: 0 12px 40px rgb(42 21 32 / .06); }
+.card p { margin: 0; color: var(--muted); font-size: 14px; }
+label.f { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+input { border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 11px 12px; width: 100%; min-width: 0; }
+.pw { position: relative; }
+.pw input { padding-right: 76px; }
+.pw button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: none; color: var(--lacquer); font-weight: 600; font-size: 13px; cursor: pointer; padding: 6px 8px; }
+.check { display: flex; gap: 10px; align-items: center; font-size: 14px; }
+.check input { width: 18px; height: 18px; accent-color: var(--lacquer); }
+.btn { border: 0; border-radius: 999px; padding: 13px 18px; font-weight: 600; cursor: pointer; background: var(--lacquer); color: var(--lacquer-ink); width: 100%; }
+.btn:disabled { opacity: .6; cursor: progress; }
+.link { background: none; border: 0; color: var(--lacquer); font-weight: 600; cursor: pointer; padding: 0; font-size: 14px; }
+.links { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.err { background: var(--bad-bg); color: var(--bad); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.code { font: 600 24px/1.2 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: .06em; text-align: center; background: var(--blush); border-radius: 12px; padding: 16px 10px; user-select: all; word-break: break-all; }
+.warn { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.apk { display: flex; gap: 12px; align-items: center; justify-content: center; text-decoration: none; color: var(--ink); border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 12px 16px; }
+.apk:hover { border-color: var(--lacquer); }
+.apk svg { color: #3ddc84; flex: none; }
+.apk span { display: grid; font-size: 14px; }
+.apk small { color: var(--muted); font-size: 12px; }
+.foot { text-align: center; font-size: 13px; color: var(--muted); }
+.foot a { color: inherit; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="brand">Beaty<span>Nails</span><small>Panel del salón</small></div>
+
+  <!-- Entrar -->
+  <form class="card" id="fLogin" novalidate hidden>
+    <h1>Entrar al panel</h1>
+    <label class="f" for="lUser">Usuario<input id="lUser" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+    <label class="f" for="lPass">Contraseña<span class="pw"><input id="lPass" type="password" autocomplete="current-password"><button type="button" data-show="lPass">Mostrar</button></span></label>
+    <label class="check"><input type="checkbox" id="lRemember"> Mantener la sesión en este equipo</label>
+    <div class="err" id="lErr" role="alert" hidden></div>
+    <button class="btn" type="submit">Entrar</button>
+    <div class="links" id="lLinks"><button type="button" class="link" data-go="recover">¿Olvidaste tu contraseña?</button></div>
+  </form>
+
+  <!-- Recuperar con el código -->
+  <form class="card" id="fRecover" novalidate hidden>
+    <h1>Recuperar el acceso</h1>
+    <p>Escribe tu usuario y el código de recuperación que guardaste al crear el acceso.</p>
+    <label class="f" for="rUser">Usuario<input id="rUser" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+    <label class="f" for="rCode">Código de recuperación<input id="rCode" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX"></label>
+    <label class="f" for="rPass">Contraseña nueva<span class="pw"><input id="rPass" type="password" autocomplete="new-password" placeholder="Al menos 8 caracteres"><button type="button" data-show="rPass">Mostrar</button></span></label>
+    <div class="err" id="rErr" role="alert" hidden></div>
+    <button class="btn" type="submit">Guardar contraseña nueva</button>
+    <div class="links"><button type="button" class="link" data-go="login">Volver a entrar</button></div>
+  </form>
+
+  <!-- Código de recuperación recién creado -->
+  <section class="card" id="fCode" hidden>
+    <h1>Guarda tu código de recuperación</h1>
+    <p>Si olvidas la contraseña, con este código pones una nueva. Anótalo o guárdale una foto: no se vuelve a mostrar.</p>
+    <div class="code" id="codeOut"></div>
+    <button class="btn" type="button" id="codeDone">Ya lo guardé, entrar al panel</button>
+  </section>
+
+  <a class="apk" id="apkLink" href="descargas/beatynails-panel.apk" download><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M17.6 9.48l1.84-3.18a.38.38 0 00-.66-.38l-1.86 3.22a11.4 11.4 0 00-9.84 0L5.22 5.92a.38.38 0 00-.66.38L6.4 9.48A10.8 10.8 0 001 18h22a10.8 10.8 0 00-5.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg><span><b>Descargar la app para Android</b><small>Panel del salón · APK</small></span></a>
+  <p class="foot" id="footBack"><a href="index.html">← Volver a la página del salón</a></p>
+</main>
+
+<script src="auth.js?v=20261009d"></script>
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  // Solo se regresa a páginas del propio sitio
+  var next = new URLSearchParams(location.search).get("next") || "";
+  if (!/^[\w-]+\.html(#[\w-]*)?$/.test(next)) next = "admin.html";
+
+  function show(id) {
+    ["fLogin", "fRecover", "fCode"].forEach(function (f) { $("#" + f).hidden = f !== id; });
+    var first = $("#" + id).querySelector("input, button.btn"); if (first) first.focus();
+  }
+  function err(id, msg) { var e = $("#" + id); e.textContent = msg || ""; e.hidden = !msg; }
+  function busy(form, on) { var b = form.querySelector(".btn"); b.disabled = on; }
+  function enter() { location.replace(next); }
+
+  if (!window.crypto || !crypto.subtle) {
+    show("fLogin");
+    err("lErr", "Este navegador no puede proteger el panel. Ábrelo desde la dirección segura del sitio (https://).");
+    $("#fLogin .btn").disabled = true;
+    return;
+  }
+  if (Auth.session()) return enter();
+  $("#lLinks").hidden = !Auth.canRecover();
+  // Dentro de la app ya no hace falta ofrecer la app
+  if (/BeatyNailsApp/.test(navigator.userAgent)) $("#apkLink").hidden = true;
+  show("fLogin");
+
+  document.addEventListener("click", function (e) {
+    var s = e.target.closest("[data-show]");
+    if (s) { var i = document.getElementById(s.dataset.show), hide = i.type === "text"; i.type = hide ? "password" : "text"; s.textContent = hide ? "Mostrar" : "Ocultar"; return; }
+    var g = e.target.closest("[data-go]");
+    if (g) { show(g.dataset.go === "recover" ? "fRecover" : "fLogin"); if (g.dataset.go === "recover") $("#rUser").value = $("#lUser").value; }
+  });
+
+  $("#fLogin").addEventListener("submit", function (e) {
+    e.preventDefault(); err("lErr");
+    var u = $("#lUser").value, p = $("#lPass").value;
+    if (!u.trim() || !p) return err("lErr", "Escribe tu usuario y tu contraseña.");
+    busy(this, true);
+    var f = this;
+    Auth.login(u, p, $("#lRemember").checked).then(enter, function (x) { busy(f, false); err("lErr", x.message); $("#lPass").select(); });
+  });
+
+  $("#fRecover").addEventListener("submit", function (e) {
+    e.preventDefault(); err("rErr");
+    var u = $("#rUser").value, c = $("#rCode").value, p = $("#rPass").value;
+    if (!u.trim() || !c.trim()) return err("rErr", "Escribe tu usuario y el código.");
+    busy(this, true);
+    var f = this;
+    Auth.recover(u, c, p).then(function (code) { $("#codeOut").textContent = code; $("#fCode p").textContent = "Tu contraseña cambió. Este es tu código de recuperación nuevo; el anterior ya no sirve. Guárdalo: no se vuelve a mostrar."; show("fCode"); }, function (x) { busy(f, false); err("rErr", x.message); });
+  });
+
+  $("#codeDone").addEventListener("click", enter);
+})();
+</script>
+</body>
+</html>
