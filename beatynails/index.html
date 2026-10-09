@@ -331,8 +331,8 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
 </aside>
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="datos.js"></script>
-<script src="pagos.js"></script>
+<script src="datos.js?v=20261009b"></script>
+<script src="pagos.js?v=20261009b"></script>
 <script>
 (function () {
   // Datos y utilidades compartidos con el panel: datos.js
@@ -535,6 +535,11 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
     save("bn_products", all); refreshProducts();
     if (ordered && ordered.id === id) { ordered = null; renderCart(); }
   }
+  // Recuadro con el código para el salón (no depende de que el navegador tenga pagos.js al día)
+  function codeBox(code, why) {
+    if (Pagos.codeHtml) return Pagos.codeHtml(code, why);
+    return '<div style="background:var(--blush);border-radius:14px;padding:14px;text-align:center;display:grid;gap:4px"><small style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--lacquer)">Tu código para el salón</small><b class="num" style="font:700 44px/1.1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.3em;padding-left:.3em">' + esc(code || "") + '</b><span style="font-size:14px;color:var(--muted)">' + esc(why) + '</span></div>';
+  }
   /** Muestra el resultado del cobro y deja la cita o el pedido al día. */
   function finishPay(ref, res) {
     var r = Pagos.apply(ref, res);
@@ -546,8 +551,8 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
       var why = isB ? "Dalo al llegar al salón para confirmar tu asistencia." : x.delivery === "recoger" ? "Dalo en el salón para recoger tu pedido." : "Tenlo a la mano cuando recibas tu pedido.";
       Pagos.modal({
         title: isB ? (rest > 0 ? "¡Anticipo recibido!" : "¡Cita pagada!") : "¡Pago recibido!",
-        html: isB ? "<p>Tu cita de " + esc(x.serviceName.toLowerCase()) + " quedó confirmada el " + esc(niceDate(x.date)) + " a las " + hm(x.start) + " con " + esc(x.staff) + ".</p><p>Pagaste <b class=\"num\">" + money(p.paid) + "</b> con " + provName(p.provider) + "." + (rest > 0 ? " Te quedan <b class=\"num\">" + money(rest) + "</b> para pagar en el salón." : "") + "</p>" + Pagos.codeHtml(x.codigo, why)
-          : "<p>Pedido <b class=\"num\">" + esc(x.id) + "</b> pagado: <b class=\"num\">" + money(p.paid) + "</b> con " + provName(p.provider) + ".</p><p>" + (x.delivery === "recoger" ? "Te avisamos por WhatsApp cuando esté listo para recoger." : "Te escribimos por WhatsApp para coordinar el envío.") + "</p>" + Pagos.codeHtml(x.codigo, why),
+        html: isB ? "<p>Tu cita de " + esc(x.serviceName.toLowerCase()) + " quedó confirmada el " + esc(niceDate(x.date)) + " a las " + hm(x.start) + " con " + esc(x.staff) + ".</p><p>Pagaste <b class=\"num\">" + money(p.paid) + "</b> con " + provName(p.provider) + "." + (rest > 0 ? " Te quedan <b class=\"num\">" + money(rest) + "</b> para pagar en el salón." : "") + "</p>" + codeBox(x.codigo, why)
+          : "<p>Pedido <b class=\"num\">" + esc(x.id) + "</b> pagado: <b class=\"num\">" + money(p.paid) + "</b> con " + provName(p.provider) + ".</p><p>" + (x.delivery === "recoger" ? "Te avisamos por WhatsApp cuando esté listo para recoger." : "Te escribimos por WhatsApp para coordinar el envío.") + "</p>" + codeBox(x.codigo, why),
         buttons: [{ label: "Listo", primary: true }]
       });
       if (isB) $("#bkMsg").innerHTML = '<div class="msg ok"><b>Cita pagada.</b> ' + esc(niceDate(x.date)) + ' a las ' + hm(x.start) + ' con ' + esc(x.staff) + '. Tu código para el salón es <b class="num">' + esc(x.codigo) + '</b>.</div>';
@@ -595,7 +600,7 @@ footer.site { border-top: 1px solid var(--line); padding-block: 26px; font-size:
     if (ordered) {
       var cur = BN.orders().find(function (o) { return o.id === ordered.id; }) || ordered, op = cur.payment || {}, paid = op.status === "pagado";
       $("#lines").innerHTML = '<div class="empty"><h2 style="color:var(--ink);margin-bottom:10px">¡Gracias por tu compra!</h2><p>Pedido <b class="num">' + ordered.id + '</b> por <b class="num">' + money(ordered.total) + '</b>' + (paid ? ", pagado con " + provName(op.provider) : "") + '.<br>' +
-        (ordered.delivery === "recoger" ? "Te avisamos por WhatsApp cuando esté listo para recoger en el salón." : paid ? "Te escribimos por WhatsApp para coordinar el envío." : "Te escribimos por WhatsApp para coordinar el pago y el envío.") + '</p>' + (paid && cur.codigo ? '<div style="margin-top:14px;text-align:left">' + Pagos.codeHtml(cur.codigo, cur.delivery === "recoger" ? "Dalo en el salón para recoger tu pedido." : "Tenlo a la mano cuando recibas tu pedido.") + '</div>' : "") + '</div>';
+        (ordered.delivery === "recoger" ? "Te avisamos por WhatsApp cuando esté listo para recoger en el salón." : paid ? "Te escribimos por WhatsApp para coordinar el envío." : "Te escribimos por WhatsApp para coordinar el pago y el envío.") + '</p>' + (paid && cur.codigo ? '<div style="margin-top:14px;text-align:left">' + codeBox(cur.codigo, cur.delivery === "recoger" ? "Dalo en el salón para recoger tu pedido." : "Tenlo a la mano cuando recibas tu pedido.") + '</div>' : "") + '</div>';
       $("#cartFoot").innerHTML = '<button class="btn btn-primary" type="button" id="keepShopping">Seguir comprando</button>';
       return;
     }

@@ -1,0 +1,6 @@
+# Que el navegador siempre revise si hay una versión nueva de la página y sus scripts
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
